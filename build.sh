@@ -55,7 +55,7 @@ build() {
     fi
     
     cd "$SCRIPT_DIR"
-    nix build .#bootDebugISO.config.system.build.isoImage
+    nix build --extra-experimental-features nix-command .#bootDebugISO.config.system.build.isoImage
     
     echo ""
     local iso=$(iso_path)

@@ -20,14 +20,19 @@ A reproducible NixOS ISO image configured for maximum boot-time verbosity and de
 # Navigate to project directory
 cd /path/to/nixos
 
-# Build the ISO (first build takes 15-30 minutes)
-nix build .#bootDebugISO.config.system.build.isoImage
+# Build the ISO using the build script (recommended)
+./build.sh build
+
+# OR build manually (first build takes 15-30 minutes)
+nix build --extra-experimental-features nix-command .#bootDebugISO.config.system.build.isoImage
 
 # Find the ISO file
 ls -lh result/iso/nixos-*.iso
 
 # Expected output: ISO file ~900MB
 ```
+
+**Note**: The `--extra-experimental-features nix-command` flag is required for Flakes to work. The `build.sh` script handles this automatically.
 
 The build output will be a symlink `result/` pointing to the built ISO.
 
