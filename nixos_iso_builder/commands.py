@@ -5,6 +5,7 @@ import subprocess
 from argparse import Namespace
 from pathlib import Path
 
+from .help_loader import get_burn_help, get_main_help
 from .iso_utils import find_iso, validate_iso_is_file
 from .logging_utils import log_error, log_info, log_success, log_warn
 from .nix_utils import build_iso, cleanup_result_symlinks, command_exists, validate_log_level
@@ -181,31 +182,8 @@ def cmd_inspect(args: Namespace, script_dir: Path) -> int:
 
 def cmd_burn_help(args: Namespace, script_dir: Path) -> int:
     """Show USB burning instructions"""
-    iso = find_iso(script_dir)
-    if not iso:
-        log_error("ISO file not found")
-        return 1
-
-    iso_path = Path(iso)
     print()
-    log_info("=== USB Burning Instructions ===")
-    print()
-    print("1. Insert USB drive")
-    print("2. Identify device (e.g. /dev/sdb):")
-    print("   sudo lsblk")
-    print()
-    print("3. Unmount USB (if auto-mounted):")
-    print("   sudo umount /dev/sdX*")
-    print()
-    print(f"4. Write ISO to USB:")
-    print(f"   sudo dd if={iso} of=/dev/sdX bs=4M status=progress")
-    print(f"   (Replace sdX with your actual device, e.g. sdb, sdc)")
-    print()
-    print("5. Sync and eject:")
-    print("   sudo sync && sudo eject /dev/sdX")
-    print()
-    log_warn("⚠️  WARNING: dd will overwrite entire USB drive!")
-    log_warn("⚠️  Triple-check /dev/sdX before running dd!")
+    print(get_burn_help())
     print()
     return 0
 
@@ -213,28 +191,6 @@ def cmd_burn_help(args: Namespace, script_dir: Path) -> int:
 def cmd_help(args: Namespace, script_dir: Path) -> int:
     """Show help message"""
     print()
-    log_info("NixOS Debug ISO Build Script - Python Edition")
-    print()
-    print("Usage: ./build.py <command> [options]")
-    print()
-    print("Commands:")
-    print("  build [--log-level LEVEL]  Build ISO with debug logging (default: debug)")
-    print("  clean                      Remove build artifacts")
-    print("  test                       Boot ISO in QEMU for testing")
-    print("  inspect                    Mount and inspect ISO contents")
-    print("  burn-help                  Show USB burning instructions")
-    print("  help                       Show this help message")
-    print()
-    print("Log Levels:")
-    print("  debug       - Maximum verbosity (for troubleshooting)")
-    print("  info        - Balanced logging (default)")
-    print("  production  - Minimal logs (for deployment)")
-    print("  minimal     - Quiet mode (for CI/CD)")
-    print()
-    print("Examples:")
-    print("  ./build.py build                      # Build with debug logging")
-    print("  ./build.py build --log-level minimal  # Build with minimal logging")
-    print("  ./build.py test                       # Test in QEMU")
-    print("  ./build.py clean                      # Clean artifacts")
+    print(get_main_help())
     print()
     return 0
