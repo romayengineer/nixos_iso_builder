@@ -6,10 +6,10 @@ Build a custom NixOS minimal ISO image with debug/verbose logging enabled by def
 ## Critical Build Information
 
 ### Build Method: Flakes (Modern NixOS)
-- **Build command**: `nix build --extra-experimental-features nix-command .#bootDebugISO.config.system.build.isoImage`
+- **Build command**: `nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO.config.system.build.isoImage`
 - **Output path**: `result/iso/nixos-*.iso`
 - **Prerequisites**: Nix package manager must be installed on the build machine
-- **Note**: The `--extra-experimental-features nix-command` flag is required for flakes to work
+- **Note**: The `--extra-experimental-features "nix-command flakes"` flag is required for flakes to work
 
 ### Flake Configuration (`flake.nix`)
 - **Minimal imports**: Only `installation-cd-minimal.nix` base (no GUI, no graphical modules)

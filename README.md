@@ -24,7 +24,7 @@ cd /path/to/nixos
 ./build.sh build
 
 # OR build manually (first build takes 15-30 minutes)
-nix build --extra-experimental-features nix-command .#bootDebugISO.config.system.build.isoImage
+nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO.config.system.build.isoImage
 
 # Find the ISO file
 ls -lh result/iso/nixos-*.iso
@@ -32,7 +32,7 @@ ls -lh result/iso/nixos-*.iso
 # Expected output: ISO file ~900MB
 ```
 
-**Note**: The `--extra-experimental-features nix-command` flag is required for Flakes to work. The `build.sh` script handles this automatically.
+**Note**: The `--extra-experimental-features "nix-command flakes"` flag is required for Flakes to work. The `build.sh` script handles this automatically.
 
 The build output will be a symlink `result/` pointing to the built ISO.
 
