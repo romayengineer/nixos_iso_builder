@@ -54,9 +54,22 @@ def log_error(message: str) -> None:
 
 def find_iso() -> Optional[str]:
     """Find the built ISO file, return path or None"""
+    # First try result/iso/ (old layout for backward compatibility)
     iso_dir = SCRIPT_DIR / "result" / "iso"
-    isos = sorted(iso_dir.glob("nixos-*.iso")) if iso_dir.exists() else []
-    return str(isos[0]) if isos else None
+    if iso_dir.exists():
+        isos = sorted(iso_dir.glob("nixos-*.iso"))
+        if isos:
+            return str(isos[0])
+    
+    # Then try result symlink directly (current layout from nix build)
+    result_link = SCRIPT_DIR / "result"
+    if result_link.exists() and result_link.is_symlink():
+        # The result symlink points to the ISO file itself in the nix store
+        target = result_link.resolve()
+        if target.suffix == ".iso":
+            return str(target)
+    
+    return None
 
 
 def run_command(cmd: List[str], cwd: Optional[Path] = None, check: bool = True) -> int:
