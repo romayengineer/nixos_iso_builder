@@ -197,6 +197,52 @@ See `flake.nix` in this project (227 lines, 159 comment lines, 70% documentation
 - Pull requests without adequate .nix comments will be requested for revision
 - New .nix files must follow this standard from creation
 
+## Testing Standards: ALL TESTS MUST PASS
+
+### ⭐ HARD RULE: NEVER SKIP TESTS - ALL INTEGRATION TESTS MUST PASS
+
+**This is a non-negotiable requirement. Tests represent the contract of the system.**
+
+#### 1. **No Skipped Tests**
+- **NEVER** use `@pytest.mark.skip()` on any test
+- **NEVER** use `pytest.xfail()` to mark expected failures
+- **NEVER** use conditional skip logic to avoid failing tests
+- Every test in the repo must pass 100% of the time
+- If a test fails, FIX THE CODE - don't skip the test
+
+#### 2. **Integration Tests Are Critical**
+- Integration tests (`tests/integration/`) verify real behavior, not mocked behavior
+- They must pass after ANY change to flake.nix, build.py, or nixos_iso_builder package
+- They validate the entire build pipeline end-to-end
+- Skipping integration tests means the build system is untested
+
+#### 3. **Test Failure Resolution Process**
+When a test fails:
+1. **Analyze the failure**: Understand what the test expects vs. what actually happens
+2. **Fix the root cause**: Modify flake.nix, nixos_iso_builder code, or build.py to make the test pass
+3. **Verify the fix**: Run `make test-integration` until all tests pass
+4. **Document the fix**: Explain in code comments why the change was needed
+5. **Never ship a failure**: Always commit working code with passing tests
+
+#### 4. **Specific Rule for Integration Tests**
+- `make test-integration` must exit with code 0 (all tests pass)
+- Before committing, run: `python3 -m pytest tests/integration/test_build.py -v`
+- All assertions must pass; no "expected failures" allowed
+- If the flake.nix produces invalid output, FIX THE FLAKE - don't skip the test
+
+#### 5. **Why This Matters**
+- **Trust**: Tests are the only guarantee that code works as intended
+- **Regression Prevention**: Skipping tests allows bugs to hide and resurface
+- **Integration Tests Especially**: They test the actual nix build, not mocked behavior
+- **User Confidence**: Users depend on the ISO actually being built
+- **Project Quality**: This project is about providing a working debug ISO - no shortcuts
+
+#### 6. **Enforcement**
+- Any commit that skips tests will be rejected
+- Any PR with `@pytest.mark.skip()` will be requested for revision
+- Integration test failures must be fixed before proceeding with other work
+- Use `make test-all` frequently during development to catch issues early
+
 ### Common Pitfalls for Agents
 
 ### Mistake: Writing logs directly to USB during early boot
