@@ -53,21 +53,49 @@ def log_error(message: str) -> None:
 
 
 def find_iso() -> Optional[str]:
-    """Find the built ISO file, return path or None"""
-    # First try result/iso/ (old layout for backward compatibility)
-    iso_dir = SCRIPT_DIR / "result" / "iso"
-    if iso_dir.exists():
+    """Find the built ISO file, return path or None
+    
+    Searches for ISO files in this order:
+    1. result/iso/ (standard output location)
+    2. result symlink directly (if it's a file)
+    3. ANY ISO in /nix/store under result links or recent paths
+    4. Latest ISO anywhere in /nix/store (fallback)
+    """
+    # Try result/iso/ first
+    result_link = SCRIPT_DIR / "result"
+    iso_dir = result_link / "iso"
+    if iso_dir.exists() and iso_dir.is_dir():
         isos = sorted(iso_dir.glob("nixos-*.iso"))
         if isos:
             return str(isos[0])
-
-    # Then try result symlink directly (current layout from nix build)
-    result_link = SCRIPT_DIR / "result"
-    if result_link.exists() and result_link.is_symlink():
-        # The result symlink points to the ISO file itself in the nix store
-        target = result_link.resolve()
-        if target.suffix == ".iso":
-            return str(target)
+    
+    # Check if result itself is a direct ISO file
+    if result_link.exists() and result_link.is_file() and result_link.suffix == ".iso":
+        return str(result_link)
+    
+    # Fallback: Check all result-* symlinks
+    nix_store = Path("/nix/store")
+    for result_variant in SCRIPT_DIR.glob("result*"):
+        if result_variant.is_symlink():
+            target_iso_dir = result_variant / "iso"
+            if target_iso_dir.exists() and target_iso_dir.is_dir():
+                isos = sorted(target_iso_dir.glob("nixos-*.iso"))
+                if isos:
+                    return str(isos[0])
+    
+    # Ultimate fallback: Find any ISO anywhere in /nix/store (newest first)
+    if nix_store.exists():
+        iso_files: List[Path] = []
+        # Search for any nixos ISO file
+        for iso_path in nix_store.glob("**/*.iso"):
+            if iso_path.is_file() and "nixos" in str(iso_path):
+                iso_files.append(iso_path)
+        
+        if iso_files:
+            # Sort by modification time, newest first
+            iso_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            log_warn(f"Using fallback ISO from nix store: {iso_files[0]}")
+            return str(iso_files[0])
 
     return None
 
