@@ -17,7 +17,7 @@ Build a custom NixOS minimal ISO image with debug/verbose logging enabled by def
   - `boot.initrd.verbose = true` (early boot verbosity)
   - `boot.kernelParams = ["loglevel=7" "systemd.log_level=debug" "systemd.log_target=console"]`
 - **Compression**: Use `lz4` for faster builds during development
-- **NixOS version**: Pin to `nixos-25.05` or stable branch for reproducibility
+- **NixOS version**: Pin to `nixos-26.05` or stable branch for reproducibility
 
 ### Build Time & Disk Space
 - **First build**: 15-30 minutes (downloads/compiles dependencies)
