@@ -47,8 +47,9 @@
     #   main         - Latest development branch
     # Pinning to a specific branch ensures reproducible builds across time
     # All machines using this flake will get the same versions
-    # NOTE: Using nixos-unstable because nixos-26.05 has isoImage build issues
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # NOTE: Using nixos-unstable because nixos-26.05 has broken isoImage
+    # that doesn't create actual output files (https://github.com/NixOS/nixpkgs/issues/...)
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
   # outputs: What this flake produces (build outputs)
@@ -197,21 +198,9 @@
            isoImage = nixosEval.config.system.build.isoImage;
            
          in
-         # Force Nix to actually build the isoImage by creating a derivation
-         # that depends on it. The key is that we need to reference its content
-         # so Nix will actually execute the builder.
-         pkgs.stdenv.mkDerivation {
-           name = "bootDebugISO-${profileName}";
-           # The isoImage derivation is a build input
-           iso = isoImage;
-           # Tell Nix we don't need to unpack anything
-           phases = [ "installPhase" ];
-           # Copy the entire isoImage output (which contains iso/ directory) to $out
-           installPhase = ''
-             mkdir -p $out
-             cp -r $iso/* $out/
-           '';
-         }
+         # Return the isoImage directly without wrapping
+         # This allows Nix to build the ISO image without intermediate wrapper derivation
+         isoImage
         );
     in
     {

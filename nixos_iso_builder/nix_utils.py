@@ -97,7 +97,8 @@ def build_iso(
                     "--extra-experimental-features",
                     "nix-command flakes",
                     "--print-out-paths",
-                    "-L",  # Alias for --print-build-logs
+                    "--print-build-logs",
+                    "--rebuild",
                     flake_output,
                 ],
                 cwd=script_dir,

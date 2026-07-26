@@ -337,6 +337,43 @@ When flake.nix modifications don't work:
 3. Don't assume custom attributes trigger builds - check buildInputs
 4. Write tests to validate assumptions (test_nix_eval.py approach)
 
+### Current Issue: isoImage Missing Build Logic (BLOCKING)
+
+Investigation via test_nix_eval.py revealed the REAL root cause:
+
+**The isoImage derivation from `installation-cd-minimal.nix` has no custom build phases.**
+
+Evidence from tests:
+```
+test_bootdebugiso_minimal_args: builder is /nix/store/.../bash
+test_bootdebugiso_minimal_drv_info: .drv file uses generic default-builder.sh
+test_isoimage_missing_build_logic: Custom phases list is EMPTY []
+```
+
+What we found:
+1. isoImage IS a valid derivation (passes all structural tests)
+2. It HAS all required inputs (syslinux, version, efi, initrd, linux kernel, etc.)
+3. It declares outPath as `/nix/store/...iso/` (directory, not file)
+4. BUT: It uses default stdenv builder (bash generic/default-builder.sh)
+5. AND: It has NO custom buildPhase or installPhase to create the ISO
+6. RESULT: The builder just unpacks sources, doesn't create any ISO file
+
+**Why This Happens:**
+The NixOS `installation-cd-minimal.nix` module configures the ISO image settings but doesn't provide a custom builder script. The isoImage derivation is created but the builder that would actually run `mkisofs` or similar never executes.
+
+**Why We Missed This:**
+- When you run `nix build` on a derivation that lacks build phases, Nix still reports success
+- The output directory is created with the expected structure (iso/, nix-support/)
+- But the actual ISO file is never created inside iso/
+- It silently fails without error message
+
+**Solution Directions:**
+This requires either:
+1. Patching `installation-cd-minimal.nix` to include custom buildPhase/installPhase
+2. Creating a custom ISO builder module specific to this project
+3. Using a different approach entirely (e.g., `nixos-rebuild build-image` or direct `mkisofs` call)
+4. Investigating if there's a NixOS version where isoImage works correctly with flakes
+
 ## Nix Development Environment Expectations
 
 - Build requires internet access (downloads nixpkgs, dependencies)
