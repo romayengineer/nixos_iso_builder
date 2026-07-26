@@ -279,6 +279,64 @@ ls -la mnt  # Should show: boot EFI isolinux nix-store.squashfs version.txt
 sudo umount mnt
 ```
 
+## Root Cause Analysis: ISO Build Failure (RESOLVED)
+
+### Problem Statement
+Integration tests were failing because `nix build .#bootDebugISO-minimal` produced no ISO file.
+The flake.nix returned a directory structure with an empty `iso/` subdirectory instead of the actual ISO binary.
+
+### Root Cause (Identified via test_nix_eval.py)
+
+**The mkDerivation wrapper was not declaring isoImage as a buildInput.**
+
+When `nix build` executes, it only builds derivations that are explicitly listed as `buildInputs` or referenced in phases.
+Simply setting `iso = isoImage;` as a custom attribute does NOT trigger a build.
+
+**Evidence from test_nix_eval.py:**
+```
+test_bootdebugiso_minimal_buildInputs FAILED
+AssertionError: bootDebugISO-minimal should have buildInputs: 0
+```
+
+The mkDerivation had:
+- `iso = isoImage;` (custom attribute, NOT a buildInput)
+- `buildInputs = [];` (empty - isoImage never gets built!)
+- `installPhase` tries to copy from `$iso` but `$iso` is NOT in the build environment
+
+### Why This Matters
+
+In Nix:
+1. **Attributes in stdenv.mkDerivation can be:**
+   - `buildInputs`: Derivations that WILL be built and available in `$PATH` and environment
+   - `propagatedBuildInputs`: Like buildInputs but propagate to dependent derivations
+   - Custom attributes (e.g., `iso = ...`): Just variables, NOT built unless referenced in phases
+   
+2. **Reference syntax:**
+   - `${isoImage}` or `$iso` in shell phases only works if the derivation is in buildInputs
+   - Setting `iso = isoImage;` just makes it available as a Nix variable, not a build dependency
+   
+3. **The fix:**
+   - Either: `buildInputs = [ isoImage ];` to make it a build dependency
+   - Or: Use `postUnpack` or other phases to properly reference the derivation
+   - Or: Return `isoImage` directly instead of wrapping it
+
+### How Tests Revealed This
+
+Created `tests/integration/test_nix_eval.py` with 9 tests to understand Nix behavior:
+1. Confirmed bootDebugISO-minimal evaluates to a derivation ✓
+2. Confirmed it has all required derivation attributes ✓
+3. Confirmed drvPath exists and is valid ✓
+4. **Discovered buildInputs is empty** ✗ <- ROOT CAUSE
+5. Discovered iso attribute exists but isn't a proper buildInput
+
+### Lesson: Always Test Nix Evaluation
+
+When flake.nix modifications don't work:
+1. Use `nix eval` to check what the flake produces
+2. Test intermediate values with `--apply` transformations
+3. Don't assume custom attributes trigger builds - check buildInputs
+4. Write tests to validate assumptions (test_nix_eval.py approach)
+
 ## Nix Development Environment Expectations
 
 - Build requires internet access (downloads nixpkgs, dependencies)

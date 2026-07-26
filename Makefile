@@ -62,7 +62,7 @@ burn-help:
 
 check:
 	@echo "🔍 Running mypy strict type checking..."
-	@mypy build.py nixos_iso_builder/ --strict --show-error-codes --pretty --warn-unused-ignores
+	@mypy build.py nixos_iso_builder/ tests/ --strict --show-error-codes --pretty --warn-unused-ignores
 	@echo "✅ Type check passed!"
 
 lint: check
