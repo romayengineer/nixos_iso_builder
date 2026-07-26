@@ -32,64 +32,61 @@ def cleanup_iso_files(script_dir: Path) -> None:
 
 def test_build_minimal_creates_iso() -> None:
     """Test that building with minimal profile creates an ISO file
-
+    
     This test:
-    1. Cleans up old ISO files
+    1. Cleans up old result symlinks (but not nix/store cache)
     2. Runs the actual nix build
     3. Verifies a new ISO file exists
     4. Validates it's a regular file (not directory)
     """
-    # Arrange: Clean up old files
+    # Arrange: Clean up old result symlinks
+    # Note: We can't clean /nix/store cache, but we can clean the symlinks
     cleanup_iso_files(PROJECT_ROOT)
-    iso_before = find_iso(PROJECT_ROOT)
-    assert iso_before is None, "Should start with no ISO file"
-
+    
     # Act: Build with minimal profile
     return_code = build_iso(PROJECT_ROOT, "minimal", PROJECT_ROOT / "build.log")
-
+    
     # Assert: Build succeeded
     assert return_code == 0, "Build should succeed"
-
+    
     # Assert: ISO file now exists
     iso_after = find_iso(PROJECT_ROOT)
     assert iso_after is not None, "ISO file should exist after build"
-
+    
     # Assert: It's a regular file, not a directory
     assert validate_iso_is_file(iso_after), "ISO should be a regular file"
-
+    
     # Assert: It's a real file with content
     iso_path = Path(iso_after)
     assert iso_path.exists(), "ISO file should exist on disk"
     assert iso_path.is_file(), "ISO should be a file"
-    assert iso_path.stat().st_size > 0, "ISO should have content"
+    assert iso_path.stat().st_size > 900_000_000, "ISO should be > 900MB"
 
 
 def test_build_debug_creates_iso() -> None:
     """Test that building with debug profile creates an ISO file
-
+    
     This test:
-    1. Cleans up old ISO files
+    1. Cleans up old result symlinks
     2. Runs nix build with debug profile
     3. Verifies ISO file exists and is valid
     """
-    # Arrange: Clean up old files
+    # Arrange: Clean up old result symlinks
     cleanup_iso_files(PROJECT_ROOT)
-    iso_before = find_iso(PROJECT_ROOT)
-    assert iso_before is None, "Should start with no ISO file"
-
+    
     # Act: Build with debug profile
     return_code = build_iso(PROJECT_ROOT, "debug", PROJECT_ROOT / "build.log")
-
+    
     # Assert: Build succeeded
     assert return_code == 0, "Build should succeed"
-
+    
     # Assert: ISO file exists and is valid
     iso_after = find_iso(PROJECT_ROOT)
     assert iso_after is not None, "ISO file should exist after build"
     assert validate_iso_is_file(iso_after), "ISO should be a regular file"
-
+    
     iso_path = Path(iso_after)
-    assert iso_path.stat().st_size > 0, "ISO should have content"
+    assert iso_path.stat().st_size > 900_000_000, "ISO should be > 900MB"
 
 
 def test_cleanup_result_symlinks_removes_old_links() -> None:

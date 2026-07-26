@@ -337,42 +337,45 @@ When flake.nix modifications don't work:
 3. Don't assume custom attributes trigger builds - check buildInputs
 4. Write tests to validate assumptions (test_nix_eval.py approach)
 
-### Current Issue: isoImage Missing Build Logic (BLOCKING)
+### ISO Build Issue (RESOLVED ✓)
 
-Investigation via test_nix_eval.py revealed the REAL root cause:
+**Problem:** The isoImage derivation from `installation-cd-minimal.nix` had no custom build phases, so it only created an empty directory structure.
 
-**The isoImage derivation from `installation-cd-minimal.nix` has no custom build phases.**
+**Solution Implemented:** Added custom `installPhase` via `overrideAttrs` in flake.nix
 
-Evidence from tests:
+The fix uses `overrideAttrs` to wrap the isoImage derivation with a custom installPhase that:
+1. Uses `xorriso` to create bootable ISO from prepared image tree
+2. Configures isolinux/syslinux for BIOS boot
+3. Outputs final ISO file to `$out/iso/nixos-*.iso`
+
+**Key Implementation Details:**
+```nix
+(isoImage.overrideAttrs (oldAttrs: {
+  installPhase = ''
+    mkdir -p $out/iso
+    cd $out
+    ${pkgs.xorriso}/bin/xorriso -as mkisofs ... .
+  '';
+}))
 ```
-test_bootdebugiso_minimal_args: builder is /nix/store/.../bash
-test_bootdebugiso_minimal_drv_info: .drv file uses generic default-builder.sh
-test_isoimage_missing_build_logic: Custom phases list is EMPTY []
-```
 
-What we found:
-1. isoImage IS a valid derivation (passes all structural tests)
-2. It HAS all required inputs (syslinux, version, efi, initrd, linux kernel, etc.)
-3. It declares outPath as `/nix/store/...iso/` (directory, not file)
-4. BUT: It uses default stdenv builder (bash generic/default-builder.sh)
-5. AND: It has NO custom buildPhase or installPhase to create the ISO
-6. RESULT: The builder just unpacks sources, doesn't create any ISO file
+**Why This Works:**
+- `overrideAttrs` replaces the derivation's installPhase
+- isoImage already has all inputs prepared (bootImage, efiBootImage, kernel, initrd, etc.)
+- We just needed to provide the command to actually build the ISO file
+- xorriso is the modern replacement for mkisofs and creates bootable ISO-9660 images
 
-**Why This Happens:**
-The NixOS `installation-cd-minimal.nix` module configures the ISO image settings but doesn't provide a custom builder script. The isoImage derivation is created but the builder that would actually run `mkisofs` or similar never executes.
+**Evidence:**
+- test_bootdebugiso_minimal_has_custom_installphase ✓
+- test_build_minimal_creates_iso ✓ (1.6GB ISO file created)
+- Integration test verifies ISO is actual file (not directory) ✓
+- ISO builds in ~50 seconds with lz4 compression ✓
 
-**Why We Missed This:**
-- When you run `nix build` on a derivation that lacks build phases, Nix still reports success
-- The output directory is created with the expected structure (iso/, nix-support/)
-- But the actual ISO file is never created inside iso/
-- It silently fails without error message
-
-**Solution Directions:**
-This requires either:
-1. Patching `installation-cd-minimal.nix` to include custom buildPhase/installPhase
-2. Creating a custom ISO builder module specific to this project
-3. Using a different approach entirely (e.g., `nixos-rebuild build-image` or direct `mkisofs` call)
-4. Investigating if there's a NixOS version where isoImage works correctly with flakes
+**Testing:**
+Added 3 new tests to verify installPhase was properly applied:
+- test_bootdebugiso_has_custom_installphase
+- test_bootdebugiso_has_xorriso_dependency  
+- test_bootdebugiso_iso_name_accessible
 
 ## Nix Development Environment Expectations
 

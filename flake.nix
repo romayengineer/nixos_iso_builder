@@ -198,9 +198,36 @@
            isoImage = nixosEval.config.system.build.isoImage;
            
          in
-         # Return the isoImage directly without wrapping
-         # This allows Nix to build the ISO image without intermediate wrapper derivation
-         isoImage
+         # Wrap isoImage with custom installPhase to actually build the ISO file
+         # The isoImage derivation has all inputs ready but lacks the build command
+         # This wrapper adds the command to create the actual ISO binary
+         (isoImage.overrideAttrs (oldAttrs: {
+           # Replace the installPhase with one that actually builds the ISO
+           installPhase = ''
+             mkdir -p $out/iso
+             cd $out
+             
+             # Use xorriso to create bootable ISO from the prepared image tree
+             # The isoImage derivation prepares:
+             #   - bootImage: BIOS bootable image  
+             #   - efiBootImage: EFI bootable image
+             #   - boot/ directory with kernel and initrd
+             #   - nix/ directory with nix store
+             
+             ${pkgs.xorriso}/bin/xorriso \
+               -as mkisofs \
+               -iso-level 3 \
+               -o iso/${isoImage.isoName} \
+               -full-iso9660-filenames \
+               -volid "${isoImage.volumeID}" \
+               -eltorito-boot boot/isolinux/isolinux.bin \
+               -eltorito-catalog boot/isolinux/boot.cat \
+               -boot-load-size 4 \
+               -boot-info-table \
+               -no-emul-boot \
+               .
+           '';
+         }))
         );
     in
     {
