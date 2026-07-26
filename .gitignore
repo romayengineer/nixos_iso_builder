@@ -1,3 +1,8 @@
+# ignore link to /nix/store where the .iso is
+result
+
+*.log
+
 # Nix build artifacts
 result/
 result-*

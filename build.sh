@@ -46,6 +46,7 @@ iso_path() {
 build() {
     log_info "Building NixOS ISO with debug logging..."
     log_info "First build: 15-30 minutes | Subsequent builds: 5-10 minutes"
+    log_info "Build log: $SCRIPT_DIR/build.log"
     echo ""
     
     if ! command -v nix &> /dev/null; then
@@ -55,7 +56,7 @@ build() {
     fi
     
     cd "$SCRIPT_DIR"
-    nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO.config.system.build.isoImage
+    nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO 2>&1 | tee build.log
     
     echo ""
     local iso=$(iso_path)

@@ -24,7 +24,7 @@ cd /path/to/nixos
 ./build.sh build
 
 # OR build manually (first build takes 15-30 minutes)
-nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO.config.system.build.isoImage
+nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO
 
 # Find the ISO file
 ls -lh result/iso/nixos-*.iso
@@ -123,7 +123,7 @@ If you modify `flake.nix`:
 rm -rf result/
 
 # Rebuild (subsequent builds are much faster due to caching)
-nix build .#bootDebugISO.config.system.build.isoImage
+nix build .#bootDebugISO
 ```
 
 ## Testing Without Burning to USB
@@ -159,7 +159,7 @@ sudo umount mnt
 ```bash
 # Flake inputs may have changed; update lock file
 nix flake update
-nix build .#bootDebugISO.config.system.build.isoImage
+nix build .#bootDebugISO
 ```
 
 ### Build is very slow
