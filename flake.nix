@@ -37,7 +37,7 @@
             # Kernel command-line parameters for logging
             boot.kernelParams = [
               # Maximum kernel logging verbosity
-              "loglevel=7"
+              "loglevel=2"
               
               # Systemd debug-level logging
               "systemd.log_level=debug"

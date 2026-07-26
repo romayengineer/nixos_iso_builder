@@ -6,7 +6,7 @@ How to test the custom NixOS minimal ISO with debug logging in QEMU on Windows/W
 
 ### If you're on WSL (Linux command line):
 ```bash
-./build.sh test
+./build.py test
 ```
 
 ### If you're on Windows (Command Prompt/PowerShell):
@@ -33,7 +33,7 @@ qemu-system-x86_64 --version
 
 **Method A: Using the build script**
 ```bash
-./build.sh test
+./build.py test
 ```
 
 **Method B: Direct QEMU command (without KVM - works on WSL)**
@@ -67,7 +67,7 @@ The ISO will boot to a graphical console (no display window on Windows, but you'
 |------|------|
 | Native Linux, best performance | Requires QEMU installed in WSL |
 | ISO already on WSL filesystem | No graphical window (terminal only) |
-| Works with `./build.sh test` | Display setup needed for GUI |
+| Works with `./build.py test` | Display setup needed for GUI |
 | Simple command | May need X11 forwarding for graphical mode |
 
 ---
@@ -172,7 +172,7 @@ WSL 2 on Windows 11 includes automatic X11 display forwarding. Just run:
 sudo apt install qemu-system-x86
 
 # Run with display (will open in Windows)
-./build.sh test
+./build.py test
 ```
 
 QEMU will automatically display in a Windows window using WSLg.
@@ -195,7 +195,7 @@ QEMU will automatically display in a Windows window using WSLg.
 
 4. **Run QEMU:**
    ```bash
-   ./build.sh test
+   ./build.py test
    ```
 
 ### What to Expect
@@ -246,7 +246,7 @@ Then check `qemu-boot.log` for error details.
   qemu-system-x86_64 -m 512 -cdrom result/iso/nixos-*.iso
   ```
 - **Performance:** TCG is slower than KVM (slower CPU emulation), but still boots and works fine for testing. Boot will take 1-2 minutes instead of seconds.
-- **Updated:** The `build.sh test` command has been updated to handle this automatically.
+- **Updated:** The `build.py test` command has been updated to handle this automatically.
 
 **Issue: QEMU window is very small or unreadable**
 - **Solution:** Add `serial -mon chardev=mon0` to redirect console to terminal:
@@ -291,14 +291,14 @@ Then check `qemu-boot.log` for error details.
 ```bash
 # In WSL terminal
 sudo apt install qemu-system-x86
-./build.sh test
+./build.py test
 ```
 
 Console output is perfect for debugging kernel and systemd messages. No extra setup needed.
 
 ### For Full Graphical Testing:
-- **Windows 11:** Just run `./build.sh test` - WSLg handles display
-- **Windows 10:** Install VcXsrv, then run `./build.sh test`
+- **Windows 11:** Just run `./build.py test` - WSLg handles display
+- **Windows 10:** Install VcXsrv, then run `./build.py test`
 - **Alternative:** Use Windows QEMU installer instead of WSL
 
 ---

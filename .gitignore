@@ -1,3 +1,6 @@
+__pycache__
+.mypy_cache
+
 # ignore link to /nix/store where the .iso is
 result
 

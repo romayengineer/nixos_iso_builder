@@ -2,6 +2,8 @@
 
 A reproducible NixOS ISO image configured for maximum boot-time verbosity and debug logging. Designed to capture all kernel, initrd, and systemd debug messages to help troubleshoot failed NixOS installations.
 
+**Build Tool**: Python 3 script (`build.py`) - No external dependencies, standard library only.
+
 ## Quick Start
 
 ### Prerequisites
@@ -20,11 +22,8 @@ A reproducible NixOS ISO image configured for maximum boot-time verbosity and de
 # Navigate to project directory
 cd /path/to/nixos
 
-# Build the ISO using the build script (recommended)
-./build.sh build
-
-# OR build manually (first build takes 15-30 minutes)
-nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO
+# Build the ISO using the build script
+./build.py build
 
 # Find the ISO file
 ls -lh result/iso/nixos-*.iso
@@ -32,7 +31,7 @@ ls -lh result/iso/nixos-*.iso
 # Expected output: ISO file ~900MB
 ```
 
-**Note**: The `--extra-experimental-features "nix-command flakes"` flag is required for Flakes to work. The `build.sh` script handles this automatically.
+**Note**: The build script automatically handles the `--extra-experimental-features "nix-command flakes"` flag required for Flakes.
 
 The build output will be a symlink `result/` pointing to the built ISO.
 
@@ -190,7 +189,10 @@ nix build .#bootDebugISO
 
 ## Project Files
 
-- `flake.nix` - ISO build configuration with debug logging
-- `flake.lock` - Reproducible dependency lock (auto-generated, commit to git)
-- `AGENTS.md` - Agent-focused documentation for development
-- `README.md` - This file
+- **`build.py`** - Python build script (main tool)
+- **`flake.nix`** - ISO build configuration with debug logging
+- **`flake.lock`** - Reproducible dependency lock (auto-generated, commit to git)
+- **`README.md`** - This file
+- **`AGENTS.md`** - Agent-focused documentation for development
+- **`docs/build-script-implementation.md`** - Build script internals
+- **`docs/qemu-testing-guide.md`** - QEMU testing on Windows/WSL
