@@ -60,7 +60,7 @@ def find_iso() -> Optional[str]:
         isos = sorted(iso_dir.glob("nixos-*.iso"))
         if isos:
             return str(isos[0])
-    
+
     # Then try result symlink directly (current layout from nix build)
     result_link = SCRIPT_DIR / "result"
     if result_link.exists() and result_link.is_symlink():
@@ -68,8 +68,32 @@ def find_iso() -> Optional[str]:
         target = result_link.resolve()
         if target.suffix == ".iso":
             return str(target)
-    
+
     return None
+
+
+def validate_iso_is_file(iso_path: str) -> bool:
+    """Validate that the ISO path is an actual file (not a directory)
+    
+    Args:
+        iso_path: Path to the ISO file
+        
+    Returns:
+        True if ISO is a regular file and exists, False otherwise
+    """
+    path = Path(iso_path)
+    
+    if not path.exists():
+        log_error(f"ISO file does not exist: {iso_path}")
+        return False
+    
+    if not path.is_file():
+        log_error(f"ISO path is not a file (is it a directory?): {iso_path}")
+        log_info(f"Expected: regular file")
+        log_info(f"Actual: {path.stat().st_mode:o} ({path}")
+        return False
+    
+    return True
 
 
 def run_command(cmd: List[str], cwd: Optional[Path] = None, check: bool = True) -> int:
@@ -174,8 +198,14 @@ def cmd_build(args: argparse.Namespace) -> int:
     print()
     iso = find_iso()
     if iso:
-        log_success("Build complete!")
         log_info(f"ISO location: {iso}")
+        
+        # Validate that the ISO is actually a file
+        if not validate_iso_is_file(iso):
+            log_error("Build completed but ISO validation failed")
+            return 1
+        
+        log_success("Build complete!")
         # Show file details
         iso_path = Path(iso)
         size_mb = iso_path.stat().st_size / (1024 * 1024)
@@ -230,6 +260,16 @@ def cmd_test(args: argparse.Namespace) -> int:
             return 1
 
     log_info(f"Using ISO: {iso}")
+
+    # Verify the ISO file actually exists and is a regular file
+    if not validate_iso_is_file(iso):
+        log_info(
+            "File verification failed - ISO may have been garbage collected by Nix"
+        )
+        return 1
+
+    iso_path = Path(iso)
+    log_info(f"ISO file verified ({iso_path.stat().st_size / (1024**3):.2f} GB)")
     log_info("Starting QEMU (Ctrl+C to exit)...")
     log_info(
         "Note: Running without -enable-kvm (KVM not available in WSL, will use TCG - slower)"
