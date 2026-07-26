@@ -75,11 +75,12 @@ install-dev:
 
 test-integration:
 	@echo "🧪 Running integration tests (actually builds ISOs)..."
-	@pytest tests/integration/ -v
+	@echo "⚠️  Stopping at first failure (-x flag)"
+	@pytest tests/integration/ -x
 
 test-unit:
 	@echo "🧪 Running unit tests..."
-	@pytest tests/unit/ -v 2>/dev/null || echo "No unit tests yet"
+	@pytest tests/unit/ -x 2>/dev/null || echo "No unit tests yet"
 
 test-all: test-unit test-integration
 	@echo "✅ All tests passed!"
