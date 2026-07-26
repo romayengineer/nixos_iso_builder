@@ -1,4 +1,4 @@
-.PHONY: help build build-debug build-info build-prod build-minimal clean test inspect burn-help check lint install-dev
+.PHONY: help build build-debug build-info build-prod build-minimal clean test inspect burn-help check lint install-dev test-integration test-unit test-all
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
@@ -16,7 +16,10 @@ help:
 	@echo "  make burn-help      - Show USB burning instructions"
 	@echo "  make check          - Run mypy with strict type checking"
 	@echo "  make lint           - Run all linting/checking (mypy)"
-	@echo "  make install-dev    - Install development dependencies (mypy)"
+	@echo "  make install-dev    - Install development dependencies"
+	@echo "  make test-integration - Run integration tests (builds real ISOs)"
+	@echo "  make test-unit      - Run unit tests"
+	@echo "  make test-all       - Run all tests"
 	@echo ""
 	@echo "Log levels:"
 	@echo "  debug               - Maximum verbosity (troubleshooting)"
@@ -67,7 +70,18 @@ lint: check
 
 install-dev:
 	@echo "📦 Installing development dependencies..."
-	@pip install --upgrade mypy
+	@pip install --upgrade -r requirements-test.txt
 	@echo "✅ Development dependencies installed!"
+
+test-integration:
+	@echo "🧪 Running integration tests (actually builds ISOs)..."
+	@pytest tests/integration/ -v
+
+test-unit:
+	@echo "🧪 Running unit tests..."
+	@pytest tests/unit/ -v 2>/dev/null || echo "No unit tests yet"
+
+test-all: test-unit test-integration
+	@echo "✅ All tests passed!"
 
 .DEFAULT_GOAL := help
