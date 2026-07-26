@@ -216,6 +216,7 @@ def cmd_test(args: argparse.Namespace) -> int:
             log_error("ISO still not found after build")
             return 1
 
+    log_info(f"Using ISO: {iso}")
     log_info("Starting QEMU (Ctrl+C to exit)...")
     log_info(
         "Note: Running without -enable-kvm (KVM not available in WSL, will use TCG - slower)"
