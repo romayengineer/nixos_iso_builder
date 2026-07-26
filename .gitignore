@@ -1,0 +1,27 @@
+# Nix build artifacts
+result/
+result-*
+
+# ISO files (very large, shouldn't be committed)
+*.iso
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Editor directories
+.vscode/
+.idea/
+*.sublime-*
+
+# direnv
+.envrc.local
+.direnv/
+
+# Temporary mount points
+mnt/
+
+# System files
+.cache/
