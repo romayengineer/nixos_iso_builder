@@ -105,7 +105,7 @@
              #   6 = KERN_INFO      - Informational messages
              #   7 = KERN_DEBUG     - Debug-level messages (MAXIMUM VERBOSITY)
              # Set to 7 for maximum kernel debug output to console
-             boot.consoleLogLevel = 7;
+             boot.consoleLogLevel = 3;
 
              # boot.initrd.verbose: Enable verbose output during early boot (stage-1)
              # Range: true | false (boolean)
@@ -113,7 +113,7 @@
              # false = Minimal output during boot
              # Default: true
              # Set to true to capture all early-boot debugging information
-             boot.initrd.verbose = true;
+             boot.initrd.verbose = false;
 
              # boot.kernelParams: Kernel command-line parameters passed at boot
              # These are appended to the kernel command line and control runtime behavior
@@ -131,7 +131,7 @@
                #   6 = INFO   - Show info messages and above
                #   7 = DEBUG  - Show all messages including debug (MAXIMUM)
                # Set to 7 for maximum verbosity, but 2-3 captures most boot failures
-               "loglevel=7"
+               "loglevel=3"
                
                # systemd.log_level: Systemd (init system) logging level
                # Range: emerg, alert, crit, err, warning, notice, info, debug
@@ -145,7 +145,7 @@
                #   info    - Informational messages and above
                #   debug   - All messages including debug details (MAXIMUM)
                # Set to "debug" to capture all systemd/service startup messages
-               "systemd.log_level=debug"
+               "systemd.log_level=err"
                
                # systemd.log_target: Where systemd logs are sent
                # Range: console, journal, kmsg, syslog, null, auto
