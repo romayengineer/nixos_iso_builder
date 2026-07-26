@@ -183,10 +183,22 @@ def cmd_build(args: argparse.Namespace) -> int:
     if not validate_log_level(log_level):
         return 1
 
+    # Clean up old result symlinks before building
+    # This ensures we get a fresh build and correct symlink
+    for result_path in SCRIPT_DIR.glob("result*"):
+        try:
+            if result_path.is_symlink() or result_path.is_file():
+                result_path.unlink()
+                log_info(f"Removed old result: {result_path.name}")
+        except Exception as e:
+            log_warn(f"Failed to remove {result_path.name}: {e}")
+
     # Map log level to flake output name
     flake_output = f".#bootDebugISO-{log_level}"
 
     # Build the ISO with tee behavior (output to both console and file)
+    # Using --print-out-paths to get the actual store path
+    # Using --print-build-logs to capture all build output
     try:
         with open(SCRIPT_DIR / "build.log", "w") as logfile:
             process = subprocess.Popen(
@@ -195,6 +207,8 @@ def cmd_build(args: argparse.Namespace) -> int:
                     "build",
                     "--extra-experimental-features",
                     "nix-command flakes",
+                    "--print-out-paths",
+                    "-L",  # Alias for --print-build-logs
                     flake_output,
                 ],
                 cwd=SCRIPT_DIR,
