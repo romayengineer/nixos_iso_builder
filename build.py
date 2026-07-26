@@ -208,7 +208,8 @@ def cmd_build(args: argparse.Namespace) -> int:
                     "--extra-experimental-features",
                     "nix-command flakes",
                     "--print-out-paths",
-                    "-L",  # Alias for --print-build-logs
+                    "--print-build-logs",
+                    "--rebuild",
                     flake_output,
                 ],
                 cwd=SCRIPT_DIR,
@@ -388,14 +389,14 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 def cmd_burn_help(args: argparse.Namespace) -> int:
     """Show USB burning instructions"""
-    with open("./help_burn.md", "r") as f:
+    with open(SCRIPT_DIR / "help_burn.md", "r") as f:
         print(f.read())
     return 0
 
 
 def cmd_help(args: argparse.Namespace) -> int:
     """Show help message"""
-    with open("./help.md", "r") as f:
+    with open(SCRIPT_DIR / "help.md", "r") as f:
         print(f.read())
     return 0
 
