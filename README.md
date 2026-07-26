@@ -22,7 +22,7 @@ A reproducible NixOS ISO image configured for maximum boot-time verbosity and de
 # Navigate to project directory
 cd /path/to/nixos
 
-# Build the ISO using the build script
+# Build the ISO using the build script (default: debug logging)
 ./build.py build
 
 # Find the ISO file
@@ -34,6 +34,68 @@ ls -lh result/iso/nixos-*.iso
 **Note**: The build script automatically handles the `--extra-experimental-features "nix-command flakes"` flag required for Flakes.
 
 The build output will be a symlink `result/` pointing to the built ISO.
+
+### Logging Profiles
+
+The ISO can be built with different logging verbosity levels. Choose the profile that matches your use case:
+
+#### Available Profiles
+
+| Profile | Verbosity | Use Case | Command |
+|---------|-----------|----------|---------|
+| **debug** | Maximum | Troubleshooting boot failures | `./build.py build --log-level debug` |
+| **info** | Balanced | General testing/understanding boot | `./build.py build --log-level info` |
+| **production** | Minimal | Deployment (errors only) | `./build.py build --log-level production` |
+| **minimal** | Quiet | CI/CD pipelines (critical only) | `./build.py build --log-level minimal` |
+
+#### Examples
+
+```bash
+# Build with debug logging (maximum verbosity)
+./build.py build --log-level debug
+
+# Build with production logging (errors only)
+./build.py build --log-level production
+
+# Build with minimal logging (quiet mode for automation)
+./build.py build --log-level minimal
+
+# Using Makefile shortcuts (faster)
+make build-debug      # Debug profile
+make build-info       # Info profile
+make build-prod       # Production profile
+make build-minimal    # Minimal profile
+```
+
+#### Profile Details
+
+**Debug Profile** (`--log-level debug`)
+- Kernel console level: 7 (KERN_DEBUG - all messages)
+- Systemd logging: debug level
+- Initrd output: verbose
+- Emergency shell: enabled (interactive troubleshooting on failure)
+- Best for: Investigating boot failures, understanding system startup
+
+**Info Profile** (`--log-level info`)
+- Kernel console level: 6 (KERN_INFO + above)
+- Systemd logging: info level
+- Initrd output: verbose
+- Emergency shell: enabled
+- Best for: Initial testing, understanding the boot process
+
+**Production Profile** (`--log-level production`)
+- Kernel console level: 3 (KERN_ERR - errors only)
+- Systemd logging: err level (errors only)
+- Initrd output: minimal
+- Emergency shell: disabled (security)
+- Best for: Deployment, catching real issues without debug noise
+
+**Minimal Profile** (`--log-level minimal`)
+- Kernel console level: 2 (KERN_CRIT - critical only)
+- Systemd logging: crit level (critical only)
+- Initrd output: minimal
+- Emergency shell: disabled
+- Best for: CI/CD pipelines, completely silent operation
 
 ### Burn to USB Pendrive
 

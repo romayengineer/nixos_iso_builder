@@ -38,14 +38,81 @@ If the ISO partially boots:
 - Logs stored in systemd journal if initrd stage-1 completes
 - No post-boot file writing possible for early failures (USB drivers not loaded)
 
+## Logging Profiles System
+
+The project supports multiple logging profiles that can be selected at build time without modifying any files.
+
+### How It Works
+
+**Architecture**: Using Nix Flake package outputs for profile selection
+- `logging-config.nix`: Defines 4 logging profiles (debug, info, production, minimal)
+- `flake.nix`: Creates 5 package outputs (one per profile + default)
+- `build.py`: Selects the appropriate package output based on `--log-level` flag
+
+**Key Files**:
+- `logging-config.nix` (195 lines): Profile definitions with full documentation
+- `flake.nix` (222 lines): Uses `mkBootISO` helper function to generate ISO for each profile
+- `build.py`: Maps `--log-level` to flake package names (`.#bootDebugISO-{profile}`)
+- `Makefile`: Convenient shortcuts (`make build-debug`, `make build-prod`, etc.)
+
+### Profile Selection (No File Modifications)
+
+The `--log-level` flag in `build.py` works by:
+
+1. User calls: `./build.py build --log-level production`
+2. build.py validates the level and maps it: `production` → `.#bootDebugISO-production`
+3. build.py runs: `nix build .#bootDebugISO-production`
+4. flake.nix has this output pre-defined: `bootDebugISO-production = mkBootISO "production";`
+5. `mkBootISO` function uses `logging-config.nix` to get the profile settings
+6. ISO is built with the selected profile
+
+**Advantage**: No flake.nix modifications needed. Each profile is a separate, independently-cacheable Nix derivation.
+
+### Adding New Profiles
+
+To add a new logging profile:
+
+1. Add to `logging-config.nix`:
+   ```nix
+   newprofile = {
+     consoleLogLevel = 5;
+     # ... other settings
+   };
+   ```
+
+2. Add to `flake.nix` packages section:
+   ```nix
+   packages.${system} = {
+     # ... existing profiles
+     bootDebugISO-newprofile = mkBootISO "newprofile";
+   };
+   ```
+
+3. Update `build.py` validation:
+   ```python
+   valid_levels = {"debug", "production", "info", "minimal", "newprofile"}
+   ```
+
+4. Update Makefile with new target (optional):
+   ```makefile
+   build-newprofile:
+     @python3 build.py build --log-level newprofile
+   ```
+
 ## Project Layout
 
 ```
 ./
-├── flake.nix              # Flakes configuration for ISO build
-├── flake.lock             # Lock file (auto-generated, commit to git)
-├── AGENTS.md              # This file
-└── README.md              # User-facing build/burn instructions (optional)
+├── flake.nix                  # Flakes configuration for ISO build (222 lines)
+├── flake.lock                 # Lock file (auto-generated, commit to git)
+├── logging-config.nix         # Logging profile definitions (195 lines)
+├── build.py                   # Python build script with --log-level support
+├── Makefile                   # Build automation with profile shortcuts
+├── AGENTS.md                  # This file (developer guide)
+├── README.md                  # User-facing instructions
+└── docs/
+    ├── build-script-implementation.md
+    └── qemu-testing-guide.md
 ```
 
 ## Key NixOS Module References
