@@ -54,7 +54,7 @@ def log_error(message: str) -> None:
 
 def find_iso() -> Optional[str]:
     """Find the built ISO file, return path or None
-    
+
     Searches for ISO files in this order:
     1. result/iso/ (standard output location)
     2. result symlink directly (if it's a file)
@@ -68,11 +68,11 @@ def find_iso() -> Optional[str]:
         isos = sorted(iso_dir.glob("nixos-*.iso"))
         if isos:
             return str(isos[0])
-    
+
     # Check if result itself is a direct ISO file
     if result_link.exists() and result_link.is_file() and result_link.suffix == ".iso":
         return str(result_link)
-    
+
     # Fallback: Check all result-* symlinks
     nix_store = Path("/nix/store")
     for result_variant in SCRIPT_DIR.glob("result*"):
@@ -82,7 +82,7 @@ def find_iso() -> Optional[str]:
                 isos = sorted(target_iso_dir.glob("nixos-*.iso"))
                 if isos:
                     return str(isos[0])
-    
+
     # Ultimate fallback: Find any ISO anywhere in /nix/store (newest first)
     if nix_store.exists():
         iso_files: List[Path] = []
@@ -90,7 +90,7 @@ def find_iso() -> Optional[str]:
         for iso_path in nix_store.glob("**/*.iso"):
             if iso_path.is_file() and "nixos" in str(iso_path):
                 iso_files.append(iso_path)
-        
+
         if iso_files:
             # Sort by modification time, newest first
             iso_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
@@ -102,25 +102,25 @@ def find_iso() -> Optional[str]:
 
 def validate_iso_is_file(iso_path: str) -> bool:
     """Validate that the ISO path is an actual file (not a directory)
-    
+
     Args:
         iso_path: Path to the ISO file
-        
+
     Returns:
         True if ISO is a regular file and exists, False otherwise
     """
     path = Path(iso_path)
-    
+
     if not path.exists():
         log_error(f"ISO file does not exist: {iso_path}")
         return False
-    
+
     if not path.is_file():
         log_error(f"ISO path is not a file (is it a directory?): {iso_path}")
         log_info(f"Expected: regular file")
         log_info(f"Actual: {path.stat().st_mode:o} ({path}")
         return False
-    
+
     return True
 
 
@@ -241,12 +241,12 @@ def cmd_build(args: argparse.Namespace) -> int:
     iso = find_iso()
     if iso:
         log_info(f"ISO location: {iso}")
-        
+
         # Validate that the ISO is actually a file
         if not validate_iso_is_file(iso):
             log_error("Build completed but ISO validation failed")
             return 1
-        
+
         log_success("Build complete!")
         # Show file details
         iso_path = Path(iso)
@@ -388,124 +388,15 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 def cmd_burn_help(args: argparse.Namespace) -> int:
     """Show USB burning instructions"""
-    iso = find_iso()
-    iso_display = iso or "<build the ISO first with: ./build.py build>"
-
-    help_text = f"""
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                      USB BURNING INSTRUCTIONS                             ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-
-1. IDENTIFY YOUR USB DEVICE
-   ━━━━━━━━━━━━━━━━━━━━━━━━━
-   List all devices:
-     lsblk
-   
-   Or use:
-     sudo fdisk -l
-   
-   ⚠  Look for your USB device (usually /dev/sdX where X is a letter)
-   ⚠  DO NOT confuse with your main hard drive!
-
-2. UNMOUNT USB (if already mounted)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   sudo umount /dev/sdX*
-
-3. BURN ISO TO USB
-   ━━━━━━━━━━━━━━━━━
-   
-   METHOD A: Command Line (dd)
-   ───────────────────────────
-   sudo dd if={iso_display} of=/dev/sdX bs=4M status=progress conv=fsync
-   sudo sync
-   
-   METHOD B: GUI Tools
-   ──────────────────
-   Use one of these applications:
-     - GNOME Disks (gnome-disk-utility)
-     - Balena Etcher (balena-etcher)
-     - Popsicle
-     - UNetbootin
-   
-   Steps:
-     1. Open the application
-     2. Select your ISO file from result/iso/
-     3. Select your USB device
-     4. Click Write/Burn/Start
-
-4. EJECT USB SAFELY
-   ━━━━━━━━━━━━━━━━
-   sudo eject /dev/sdX
-
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                              ⚠  WARNING  ⚠                                ║
-║                                                                            ║
-║  Replace /dev/sdX with YOUR ACTUAL USB DEVICE!                            ║
-║  Using the wrong device will overwrite your data permanently!             ║
-║                                                                            ║
-║  Double-check lsblk output before running dd command.                     ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-
-"""
-    print(help_text)
+    with open("./help_burn.md", "r") as f:
+        print(f.read())
     return 0
 
 
 def cmd_help(args: argparse.Namespace) -> int:
     """Show help message"""
-    help_text = """
-╔═══════════════════════════════════════════════════════════════════════════╗
-║           NixOS Debug ISO Build Script - Help                             ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-
-USAGE
-━━━━━
-  ./build.py <command> [args]
-
-COMMANDS
-━━━━━━━━
-  build           Build the custom NixOS ISO with debug logging
-  clean           Remove build artifacts (result/, mnt/)
-  test            Boot ISO in QEMU for testing (requires QEMU)
-  inspect         Mount and inspect ISO contents
-  burn-help       Show detailed USB burning instructions
-  help            Display this help message
-
-EXAMPLES
-━━━━━━━━
-  # Build the ISO (first: 15-30 min, subsequent: 5-10 min)
-  ./build.py build
-
-  # Test the ISO in QEMU
-  ./build.py test
-
-  # Inspect what's inside the ISO
-  ./build.py inspect
-
-  # Get USB burning instructions
-  ./build.py burn-help
-
-  # Remove build artifacts to start fresh
-  ./build.py clean
-
-WORKFLOW
-━━━━━━━
-  1. Build:      ./build.py build
-  2. Inspect:    ./build.py inspect
-  3. Test:       ./build.py test
-  4. Burn:       ./build.py burn-help    (then follow instructions)
-  5. Boot & Debug: Boot from USB, run 'journalctl --boot --all'
-
-NOTES
-━━━━━
-  • First build requires internet (downloads nixpkgs dependencies)
-  • Subsequent builds are much faster (uses cache)
-  • ISO size: ~900MB
-  • Build space needed: ~15GB
-  • Nix must be installed: https://nixos.org/download/
-
-"""
-    print(help_text)
+    with open("./help.md", "r") as f:
+        print(f.read())
     return 0
 
 
