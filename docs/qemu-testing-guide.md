@@ -36,11 +36,14 @@ qemu-system-x86_64 --version
 ./build.sh test
 ```
 
-**Method B: Direct QEMU command**
+**Method B: Direct QEMU command (without KVM - works on WSL)**
 ```bash
 cd /mnt/c/Users/Admin/Documents/Projects/nixos
-qemu-system-x86_64 -enable-kvm -m 512 -cdrom result/iso/nixos-*.iso
+# Run WITHOUT -enable-kvm (KVM not available in WSL)
+qemu-system-x86_64 -m 512 -cdrom result/iso/nixos-*.iso
 ```
+
+**Note on KVM:** WSL doesn't support KVM (Kernel-based Virtual Machine). The `-enable-kvm` flag will fail with "Permission denied". QEMU will automatically fall back to TCG (Tiny Code Generator) which is slower but still works fine for testing.
 
 ### What to Expect
 
@@ -235,9 +238,15 @@ Then check `qemu-boot.log` for error details.
 
 ### Common Issues
 
-**Issue: `-enable-kvm` not supported on Windows**
-- **Solution:** KVM (Kernel-based Virtual Machine) is Linux-only. On Windows, QEMU falls back to TCG (translation) which is slower but still works.
-- **Action:** Safe to ignore the warning; QEMU will still boot, just slower.
+**Issue: `Could not access KVM kernel module: Permission denied` in WSL (⚠️ Common)**
+- **Why:** WSL doesn't have access to the host's KVM hardware virtualization module. KVM is only available on native Linux with hardware support.
+- **Solution:** Remove the `-enable-kvm` flag and let QEMU use TCG (Tiny Code Generator) instead:
+  ```bash
+  # DON'T use -enable-kvm in WSL
+  qemu-system-x86_64 -m 512 -cdrom result/iso/nixos-*.iso
+  ```
+- **Performance:** TCG is slower than KVM (slower CPU emulation), but still boots and works fine for testing. Boot will take 1-2 minutes instead of seconds.
+- **Updated:** The `build.sh test` command has been updated to handle this automatically.
 
 **Issue: QEMU window is very small or unreadable**
 - **Solution:** Add `serial -mon chardev=mon0` to redirect console to terminal:

@@ -96,9 +96,14 @@ test_qemu() {
     fi
     
     log_info "Starting QEMU (Ctrl+C to exit)..."
+    log_info "Note: Running without -enable-kvm (KVM not available in WSL, will use TCG - slower)"
     echo ""
     
-    qemu-system-x86_64 -enable-kvm -m 512 -cdrom "$iso"
+    # Try with KVM first, fall back to TCG if not available
+    qemu-system-x86_64 -m 512 -cdrom "$iso" 2>/dev/null || {
+        log_warn "KVM failed, retrying with TCG (CPU emulation - slower)..."
+        qemu-system-x86_64 -m 512 -cdrom "$iso"
+    }
 }
 
 inspect() {
