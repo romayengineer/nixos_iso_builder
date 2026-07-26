@@ -64,123 +64,72 @@
       # nixpkgs.legacyPackages.${system} provides all nixpkgs packages
       # used in environment.systemPackages list below
       pkgs = nixpkgs.legacyPackages.${system};
-    in
-    {
-      # packages: Derivations (buildable things) this flake provides
-      # Access with: nix build .#bootDebugISO
-      # packages.${system}.PACKAGE_NAME = definition
-      # This creates a package called "bootDebugISO" for x86_64-linux
-      packages.${system}.bootDebugISO = (nixpkgs.lib.nixosSystem {
-        # Build for the system defined above
-        inherit system;
-        
-        # modules: NixOS configuration modules to merge
-        # Modules are composable configuration files that set options
-        # They are evaluated left-to-right with later ones overriding earlier
-        modules = [
-          # installation-cd-minimal.nix: Base NixOS ISO configuration
-          # Provided by nixpkgs, sets up:
-          #   - Minimal (no GUI) ISO filesystem
-          #   - Boot loader (GRUB/UEFI)
-          #   - Installer (nixos-install script)
-          #   - Basic system packages
-          # We import this as the base and then add our debug logging on top
-          "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
 
-           # Custom configuration for debug logging
-           ({ config, pkgs, modulesPath, ... }: {
-             # ========================================
-             # KERNEL LOGGING CONFIGURATION
-             # ========================================
-             
-             # boot.consoleLogLevel: Kernel console log level
-             # Range: 0-7 (integer)
-             # Levels (KERN_* kernel log levels):
-             #   0 = KERN_EMERG     - System is unusable (emergency only)
-             #   1 = KERN_ALERT     - Action must be taken immediately
-             #   2 = KERN_CRIT      - Critical conditions
-             #   3 = KERN_ERR       - Error conditions
-             #   4 = KERN_WARNING   - Warning conditions (DEFAULT)
-             #   5 = KERN_NOTICE    - Normal but significant conditions
-             #   6 = KERN_INFO      - Informational messages
-             #   7 = KERN_DEBUG     - Debug-level messages (MAXIMUM VERBOSITY)
-             # Set to 7 for maximum kernel debug output to console
-             boot.consoleLogLevel = 3;
+      # loggingConfig: Import logging profiles from logging-config.nix
+      # This provides multiple logging profiles (debug, production, info, minimal)
+      # that can be selected at build time via build.py --log-level flag
+      # Default profile is "debug" for maximum verbosity during troubleshooting
+      loggingConfig = import ./logging-config.nix;
+      
+      # Helper function to create a boot ISO with a specific logging profile
+      # Usage: mkBootISO "debug" or mkBootISO "production"
+      mkBootISO = (profileName:
+        let
+          logs = loggingConfig.${profileName};
+        in
+        (nixpkgs.lib.nixosSystem {
+          inherit system;
+          
+          # modules: NixOS configuration modules to merge
+          # Modules are composable configuration files that set options
+          # They are evaluated left-to-right with later ones overriding earlier
+          modules = [
+            # installation-cd-minimal.nix: Base NixOS ISO configuration
+            # Provided by nixpkgs, sets up:
+            #   - Minimal (no GUI) ISO filesystem
+            #   - Boot loader (GRUB/UEFI)
+            #   - Installer (nixos-install script)
+            #   - Basic system packages
+            # We import this as the base and then add our debug logging on top
+            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
 
-             # boot.initrd.verbose: Enable verbose output during early boot (stage-1)
-             # Range: true | false (boolean)
-             # true  = Show all initrd initialization messages
-             # false = Minimal output during boot
-             # Default: true
-             # Set to true to capture all early-boot debugging information
-             boot.initrd.verbose = false;
+              # Custom configuration using logging profile
+              # This section uses variables from the logging-config.nix file
+              # The selected profile (logs) determines all logging behavior
+              ({ config, pkgs, modulesPath, ... }: {
+              # ========================================
+              # KERNEL & SYSTEMD LOGGING CONFIGURATION
+              # ========================================
+              # All settings below come from the selected logging profile
+              # See logging-config.nix for profile definitions
+              
+              # boot.consoleLogLevel: Kernel console log level (from logs)
+              # Uses: logs.consoleLogLevel
+              boot.consoleLogLevel = logs.consoleLogLevel;
 
-             # boot.kernelParams: Kernel command-line parameters passed at boot
-             # These are appended to the kernel command line and control runtime behavior
-             boot.kernelParams = [
-               # loglevel: Kernel logging level for runtime messages
-               # Range: 0-7 (integer)
-               # Same levels as boot.consoleLogLevel above
-               # Values:
-               #   0 = EMERG  - Only show emergencies
-               #   1 = ALERT  - Show alerts and emergencies
-               #   2 = CRIT   - Show critical messages and above (many use this for boot)
-               #   3 = ERR    - Show errors and above
-               #   4 = WARN   - Show warnings and above (DEFAULT kernel behavior)
-               #   5 = NOTICE - Show notices and above
-               #   6 = INFO   - Show info messages and above
-               #   7 = DEBUG  - Show all messages including debug (MAXIMUM)
-               # Set to 7 for maximum verbosity, but 2-3 captures most boot failures
-               "loglevel=3"
-               
-               # systemd.log_level: Systemd (init system) logging level
-               # Range: emerg, alert, crit, err, warning, notice, info, debug
-               # Levels (in order of verbosity):
-               #   emerg   - System is unusable
-               #   alert   - Action must be taken immediately
-               #   crit    - Critical conditions only
-               #   err     - Error conditions and above
-               #   warning - Warnings and above (DEFAULT)
-               #   notice  - Normal but significant messages and above
-               #   info    - Informational messages and above
-               #   debug   - All messages including debug details (MAXIMUM)
-               # Set to "debug" to capture all systemd/service startup messages
-               "systemd.log_level=err"
-               
-               # systemd.log_target: Where systemd logs are sent
-               # Range: console, journal, kmsg, syslog, null, auto
-               # Options:
-               #   console  - Send to /dev/console (appears on screen during boot)
-               #   journal  - Send to systemd journal only (readable via journalctl post-boot)
-               #   kmsg     - Send to kernel log buffer (captured by dmesg)
-               #   syslog   - Send to syslog daemon (if available)
-               #   null     - Discard all logs (not useful for debugging)
-               #   auto     - Auto-detect best target (DEFAULT)
-               # Set to "console" to see logs on screen during early boot failures
-               "systemd.log_target=console"
-               
-               # systemd.journald.forward_to_console: Forward journal logs to console
-               # Range: 0 or 1 (yes/no, true/false)
-               # 0/no/false   - Don't forward journal messages to console
-               # 1/yes/true   - Forward all journal messages to /dev/console
-               # DEFAULT: Depends on whether systemd-journald is configured
-               # Set to "yes" so console sees both early and late-boot messages
-               "systemd.journald.forward_to_console=yes"
-             ];
+              # boot.initrd.verbose: Enable verbose early boot output (from logs)
+              # Uses: logs.initrdVerbose
+              boot.initrd.verbose = logs.initrdVerbose;
 
-             # ========================================
-             # EMERGENCY ACCESS & DEBUGGING
-             # ========================================
-             
-             # boot.initrd.systemd.emergencyAccess: Enable emergency shell in initrd
-             # Range: true | false (boolean)
-             # true  = Drop to emergency shell if initrd fails during boot
-             #         Allows manual troubleshooting of early-boot issues
-             #         Type "exit" to resume boot or reboot
-             # false = Continue to panic without shell access
-             # DEFAULT: false (emergency shell usually disabled for security)
-             # Set to true for interactive debugging during failed boot
-             boot.initrd.systemd.emergencyAccess = true;
+              # boot.kernelParams: Kernel command-line parameters (from logs)
+              # Constructed from logging profile values
+              boot.kernelParams = [
+                "loglevel=${builtins.toString logs.kernelLogLevel}"
+                "systemd.log_level=${logs.systemdLogLevel}"
+                "systemd.log_target=${logs.systemdLogTarget}"
+                "systemd.journald.forward_to_console=${logs.journaldForwardConsole}"
+              ];
+
+              # ========================================
+              # EMERGENCY ACCESS & DEBUGGING
+              # ========================================
+              
+               # boot.initrd.systemd.emergencyAccess: Emergency shell on boot failure
+               # Uses: logs.emergencyAccess
+               # true  = Interactive shell if initrd fails (for debugging)
+               # false = Panic without shell (for production/security)
+               # Use lib.mkForce to override the default from iso-image.nix
+               boot.initrd.systemd.emergencyAccess = nixpkgs.lib.mkForce logs.emergencyAccess;
 
              # ========================================
              # ISO IMAGE OPTIMIZATION
@@ -247,13 +196,28 @@
        #   .config.system.build.kernel     - Just the kernel
        #   .config.system.build.initrd     - Just the initrd (early boot)
        #   .config.system.build.toplevel   - Full system closure (everything)
-       # We only need the ISO image for this build
-       }).config.system.build.isoImage;
+         # We only need the ISO image for this build
+         }).config.system.build.isoImage
+       );
+    in
+    {
+      # packages: Derivations (buildable things) this flake provides
+      # Create separate package outputs for each logging profile
+      # Usage: nix build .#bootDebugISO-debug     (max verbosity)
+      #        nix build .#bootDebugISO-info      (balanced)
+      #        nix build .#bootDebugISO-production (minimal)
+      #        nix build .#bootDebugISO-minimal    (quiet)
+      packages.${system} = {
+        bootDebugISO-debug = mkBootISO "debug";
+        bootDebugISO-info = mkBootISO "info";
+        bootDebugISO-production = mkBootISO "production";
+        bootDebugISO-minimal = mkBootISO "minimal";
+        bootDebugISO = mkBootISO "debug";  # Default: debug profile
+      };
 
-       # defaultPackage: Package used when user runs 'nix build' without #attribute
-       # Range: Any package in packages.${system}
-       # Alternative: Could remove this line and user would need 'nix build .#bootDebugISO'
-       # With this line, 'nix build' alone is sufficient (convenience)
-       defaultPackage.${system} = self.packages.${system}.bootDebugISO;
-     };
- }
+      # defaultPackage: Package used when user runs 'nix build' without #attribute
+      # Range: Any package in packages.${system}
+      # Defaults to debug profile (maximum verbosity for troubleshooting)
+      defaultPackage.${system} = self.packages.${system}.bootDebugISO;
+    };
+  }

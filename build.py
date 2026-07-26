@@ -6,13 +6,12 @@ Commands: build, clean, test, inspect, burn-help, help
 """
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from glob import glob
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 # ============================================================================
 # CONSTANTS
@@ -76,14 +75,35 @@ def command_exists(cmd: str) -> bool:
     return result.returncode == 0
 
 
+def validate_log_level(log_level: str) -> bool:
+    """Validate that the log level is supported
+
+    Args:
+        log_level: One of "debug", "production", "info", "minimal"
+
+    Returns:
+        True if valid, False otherwise
+    """
+    valid_levels = {"debug", "production", "info", "minimal"}
+    if log_level not in valid_levels:
+        log_error(
+            f"Invalid log level: {log_level}. Must be one of: {', '.join(valid_levels)}"
+        )
+        return False
+    return True
+
+
 # ============================================================================
 # BUILD FUNCTIONS
 # ============================================================================
 
 
 def cmd_build(args: argparse.Namespace) -> int:
-    """Build the NixOS ISO with debug logging"""
-    log_info("Building NixOS ISO with debug logging...")
+    """Build the NixOS ISO with specified logging profile"""
+    # Get the log level from command-line argument (default: debug)
+    log_level: str = getattr(args, "log_level", "debug")
+
+    log_info(f"Building NixOS ISO with '{log_level}' logging profile...")
     log_info("First build: 15-30 minutes | Subsequent builds: 5-10 minutes")
     log_info(f"Build log: {SCRIPT_DIR / 'build.log'}")
     print()
@@ -94,6 +114,13 @@ def cmd_build(args: argparse.Namespace) -> int:
         log_info("Install Nix: https://nixos.org/download/")
         return 1
 
+    # Validate the log level
+    if not validate_log_level(log_level):
+        return 1
+
+    # Map log level to flake output name
+    flake_output = f".#bootDebugISO-{log_level}"
+
     # Build the ISO with tee behavior (output to both console and file)
     try:
         with open(SCRIPT_DIR / "build.log", "w") as logfile:
@@ -103,7 +130,7 @@ def cmd_build(args: argparse.Namespace) -> int:
                     "build",
                     "--extra-experimental-features",
                     "nix-command flakes",
-                    ".#bootDebugISO",
+                    flake_output,
                 ],
                 cwd=SCRIPT_DIR,
                 stdout=subprocess.PIPE,
@@ -402,7 +429,16 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # Add subcommands
-    subparsers.add_parser("build", help="Build the custom NixOS ISO with debug logging")
+    build_parser = subparsers.add_parser(
+        "build", help="Build the custom NixOS ISO with debug logging"
+    )
+    build_parser.add_argument(
+        "--log-level",
+        choices=["debug", "production", "info", "minimal"],
+        default="debug",
+        help="Logging profile to use (default: debug)",
+    )
+
     subparsers.add_parser("clean", help="Remove build artifacts")
     subparsers.add_parser("test", help="Boot ISO in QEMU for testing")
     subparsers.add_parser("inspect", help="Mount and inspect ISO contents")
