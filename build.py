@@ -9,7 +9,7 @@ import sys
 import subprocess
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, List
 import os
 import shutil
 from glob import glob
@@ -54,7 +54,7 @@ def find_iso() -> Optional[str]:
     isos = sorted(iso_dir.glob("nixos-*.iso")) if iso_dir.exists() else []
     return str(isos[0]) if isos else None
 
-def run_command(cmd: list, cwd: Optional[Path] = None, check: bool = True) -> int:
+def run_command(cmd: List[str], cwd: Optional[Path] = None, check: bool = True) -> int:
     """Run a command and return exit code"""
     try:
         result = subprocess.run(cmd, cwd=cwd or SCRIPT_DIR, check=False)
@@ -72,7 +72,7 @@ def command_exists(cmd: str) -> bool:
 # BUILD FUNCTIONS
 # ============================================================================
 
-def cmd_build(args) -> int:
+def cmd_build(args: argparse.Namespace) -> int:
     """Build the NixOS ISO with debug logging"""
     log_info("Building NixOS ISO with debug logging...")
     log_info("First build: 15-30 minutes | Subsequent builds: 5-10 minutes")
@@ -98,6 +98,7 @@ def cmd_build(args) -> int:
             )
             
             # Stream output to both console and file
+            assert process.stdout is not None, "process.stdout should not be None"
             for line in process.stdout:
                 print(line, end='')
                 logfile.write(line)
@@ -129,7 +130,7 @@ def cmd_build(args) -> int:
         log_error("ISO file not found after build")
         return 1
 
-def cmd_clean(args) -> int:
+def cmd_clean(args: argparse.Namespace) -> int:
     """Clean build artifacts"""
     log_info("Cleaning build artifacts...")
     
@@ -148,7 +149,7 @@ def cmd_clean(args) -> int:
     log_success("Cleanup complete")
     return 0
 
-def cmd_test(args) -> int:
+def cmd_test(args: argparse.Namespace) -> int:
     """Test ISO in QEMU"""
     log_info("Testing ISO in QEMU...")
     
@@ -184,7 +185,7 @@ def cmd_test(args) -> int:
     
     return 0
 
-def cmd_inspect(args) -> int:
+def cmd_inspect(args: argparse.Namespace) -> int:
     """Inspect ISO contents by mounting"""
     log_info("Inspecting ISO contents...")
     
@@ -233,7 +234,7 @@ def cmd_inspect(args) -> int:
         log_error(f"Inspection error: {e}")
         return 1
 
-def cmd_burn_help(args) -> int:
+def cmd_burn_help(args: argparse.Namespace) -> int:
     """Show USB burning instructions"""
     iso = find_iso()
     iso_display = iso or "<build the ISO first with: ./build.py build>"
@@ -297,7 +298,7 @@ def cmd_burn_help(args) -> int:
     print(help_text)
     return 0
 
-def cmd_help(args) -> int:
+def cmd_help(args: argparse.Namespace) -> int:
     """Show help message"""
     help_text = """
 ╔═══════════════════════════════════════════════════════════════════════════╗
