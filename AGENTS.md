@@ -57,7 +57,80 @@ These modules are imported automatically via `installation-cd-minimal.nix`:
 
 See research notes in conversation history for detailed module exploration.
 
-## Common Pitfalls for Agents
+## Code Quality Standards: .nix File Documentation
+
+### ⭐ REQUIRED: All .nix Files Must Have Extensive Comments
+
+**This is a mandatory code quality requirement for all Nix configuration files.**
+
+Every `.nix` file in this project must include comprehensive documentation explaining:
+
+#### 1. **Configuration Options**
+- **What it does**: Clear explanation of each setting's purpose
+- **Valid ranges**: All acceptable values or value types
+- **Value meanings**: Explanation of what each value produces
+- **Current setting**: Clearly mark which value is currently set
+- **Recommended settings**: Mark optimal values for debugging/production
+- **When to change**: When and why someone would modify this setting
+
+#### 2. **Structure Documentation**
+- **Section headers**: Organize related settings with clear headers
+- **Input explanations**: Document external inputs (inputs.nixpkgs, etc.)
+- **Output explanations**: Explain what derivations are produced
+- **Module descriptions**: Explain purpose of each imported module
+
+#### 3. **Trade-Offs and Considerations**
+- **Performance vs. quality**: Document speed/compression trade-offs
+- **Security vs. debugging**: Note when debug mode reduces security
+- **Size implications**: Explain how settings affect ISO/output size
+- **Build time impact**: Note which settings affect build duration
+
+#### 4. **Comment Format Standards**
+```nix
+# OPTION_NAME: Brief description (value type: range or options)
+# Detailed explanation of what this option controls
+# Valid values:
+#   value1 - Description of this value
+#   value2 - Description of this value (DEFAULT)
+#   value3 - Description of this value
+# Current: value2
+# RECOMMENDED: value3 (for debugging)
+# Note: Explain any special considerations or gotchas
+OPTION_NAME = value2;
+```
+
+#### 5. **Documentation Checklist**
+Before committing any .nix file:
+- [ ] Every configuration option has a comment block
+- [ ] Comment includes: what, why, valid values, current setting
+- [ ] Sections are organized with clear headers (use `# ====...====`)
+- [ ] Trade-offs are explained (performance, size, security)
+- [ ] Current settings marked with "# Current: "
+- [ ] Recommended settings marked with "# RECOMMENDED: "
+- [ ] Special considerations noted in "# Note: " comments
+- [ ] Syntax validation passes: braces/brackets balanced
+- [ ] File is > 50% comments if it has > 20 lines of config
+
+#### 6. **Why This Matters**
+- **Nix Learning Curve**: Nix syntax is unfamiliar; comments help agents understand
+- **NixOS Complexity**: Many options interact; documenting helps prevent mistakes
+- **Future Maintenance**: Comments explain design decisions
+- **Reproducibility**: Clear documentation ensures settings aren't changed accidentally
+- **Debugging**: When something breaks, comments explain what each setting does
+
+#### 7. **Example: Well-Documented .nix File**
+See `flake.nix` in this project (227 lines, 159 comment lines, 70% documentation ratio):
+- Each boot option documented with 8-12 lines of explanation
+- Valid ranges shown explicitly
+- Current and recommended settings marked
+- Trade-offs (e.g., compression algorithms) fully explained
+
+#### 8. **Enforcement**
+- Any .nix file modifications must include comment updates
+- Pull requests without adequate .nix comments will be requested for revision
+- New .nix files must follow this standard from creation
+
+### Common Pitfalls for Agents
 
 ### Mistake: Writing logs directly to USB during early boot
 - **Reality**: USB drivers not available in stage-1 (initrd)
@@ -74,6 +147,11 @@ See research notes in conversation history for detailed module exploration.
 ### Mistake: Using `nix-build` instead of `nix build`
 - **Reality**: `nix build` is the modern Flakes syntax; `nix-build` is legacy
 - **Correct command**: `nix build .#bootDebugISO`
+
+### Mistake: Creating .nix files without extensive comments
+- **Reality**: Nix syntax is unfamiliar; configuration options lack self-documentation
+- **Solution**: Follow the .nix File Documentation standard above
+- **Requirement**: Every configuration option must have comprehensive comments explaining what, why, valid values, and recommendations
 
 ## Testing the Built ISO
 
