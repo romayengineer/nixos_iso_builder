@@ -36,19 +36,30 @@
   description = "Custom NixOS Minimal ISO with Debug Logging";
 
   # inputs: External dependencies and packages used by this flake
-  # These are fetched from GitHub/channels and pinned to specific versions
+  # These are fetched from git and pinned to specific versions via flake.lock
   inputs = {
     # nixpkgs: The official NixOS package collection and modules
-    # url format: github:OWNER/REPO/REF
-    # REF options:
-    #   nixos-26.05  - Latest stable branch (2026 May release)
-    #   nixos-26.05 - Rolling release (bleeding edge, may have issues) - CURRENTLY RECOMMENDED
-    #   nixos-25.11  - Previous stable release
-    #   main         - Latest development branch
-    # Pinning to a specific branch ensures reproducible builds across time
-    # All machines using this flake will get the same versions
-    # Using github:master/main which is typically more stable than release branches
-    nixpkgs.url = "github:NixOS/nixpkgs/master";
+    #
+    # ⚠️  submodules=1 is REQUIRED: nixpkgs uses git submodules for some
+    # package sets (e.g., pkgs/top-level/haskell-packages.nix is a symlink
+    # to the haskell submodule). Without submodules=1, certain nixpkgs
+    # commits cause evaluation errors like:
+    #   "file 'pkgs/top-level/haskell-packages.nix' does not exist"
+    # This affects our minimal ISO because wpa_supplicant and other services
+    # transitively reference submodule package paths during evaluation.
+    #
+    # We use git+https instead of github: because github: fetcher does not
+    # support the submodules=1 parameter, and the tarball it downloads
+    # excludes git submodules entirely. git+https performs a full clone
+    # with submodules, which is slower initially but eliminates this class
+    # of evaluation errors permanently.
+    #
+    # Branch: master (latest development branch)
+    # Alternatives:
+    #   nixos-26.05 - Latest stable release branch
+    #   nixos-25.11 - Previous stable release
+    # master is preferred for latest features/fixes in isoImage module.
+    nixpkgs.url = "git+https://github.com/NixOS/nixpkgs?ref=master&submodules=1";
   };
 
   # outputs: What this flake produces (build outputs)
