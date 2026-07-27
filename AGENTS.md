@@ -20,6 +20,41 @@ Build a custom NixOS minimal ISO image with debug/verbose logging enabled by def
 - **Compression**: Use `lz4` for faster builds during development
 - **NixOS version**: ⭐ **MUST use `nixos-unstable`** - we want the latest stable features and bug fixes. Do NOT pin to stable branches (26.05, etc.) as they have known issues with isoImage module.
 
+### Seeing Git Progress During Input Fetching
+
+**Problem**: `nix build` with `git+https` + `submodules=1` shows no output while cloning nixpkgs (~8M objects, can take several minutes). Nix does not forward git's progress bars by default, so it appears hung.
+
+**Solution**: Set `GIT_PROGRESS_DELAY=0` to force git to show progress immediately:
+
+```bash
+# Build via build.py (handled automatically):
+./build.py build
+
+# Build via Makefile (env var set automatically):
+make build
+
+# Direct nix usage with visible git progress:
+GIT_PROGRESS_DELAY=0 nix build \
+  --extra-experimental-features "nix-command flakes" \
+  --verbose \
+  .#bootDebugISO
+
+# Pre-fetch inputs first (shows git progress separately):
+make fetch
+# or
+GIT_PROGRESS_DELAY=0 nix flake lock \
+  --update-input nixpkgs \
+  --extra-experimental-features "nix-command flakes" \
+  --verbose
+```
+
+**How it works**:
+- `GIT_PROGRESS_DELAY=0` removes the default 2-second delay before git shows progress bars
+- `--verbose` makes nix print "fetching Git repository '...'" and forward git's progress stderr
+- For even more detail (git trace output), add `--debug` (very noisy; shows raw `git fetch` commands)
+
+**Note**: The first fetch clones the entire nixpkgs repository with all submodules. Subsequent builds reuse the cached git data. The `nix flake lock --update-input nixpkgs` command only fetches/updates the input — it does not build anything, so it's a fast way to see git progress without triggering a full build.
+
 ### Build Time & Disk Space
 - **First build**: 15-30 minutes (downloads/compiles dependencies)
 - **Subsequent builds**: 5-10 minutes (cached)
