@@ -1,4 +1,4 @@
-.PHONY: help build build-debug build-info build-prod build-minimal clean test inspect burn-help check lint install-dev test-integration test-unit test-all
+.PHONY: help build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
@@ -11,7 +11,8 @@ help:
 	@echo "  make build-prod     - Build with production profile (minimal logs)"
 	@echo "  make build-minimal  - Build with minimal profile (quiet mode)"
 	@echo "  make clean          - Remove build artifacts (result/, mnt/)"
-	@echo "  make test           - Boot ISO in QEMU for testing"
+	@echo "  make test           - Run pytest integration tests"
+	@echo "  make run            - Boot ISO in QEMU for testing"
 	@echo "  make inspect        - Mount and inspect ISO contents"
 	@echo "  make burn-help      - Show USB burning instructions"
 	@echo "  make check          - Run mypy with strict type checking"
@@ -31,7 +32,8 @@ help:
 	@echo "  make install-dev    # First time only"
 	@echo "  make check          # Check for type errors"
 	@echo "  make build-debug    # Build with debug logging"
-	@echo "  make test           # Test in QEMU"
+	@echo "  make test           # Run pytest tests"
+	@echo "  make run            # Boot ISO in QEMU"
 
 build:
 	@python3 build.py build
@@ -52,6 +54,10 @@ clean:
 	@python3 build.py clean
 
 test:
+	@echo "🧪 Running pytest tests..."
+	@pytest tests/integration/test_build.py -v
+
+run:
 	@python3 build.py test
 
 inspect:

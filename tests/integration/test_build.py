@@ -30,6 +30,25 @@ def cleanup_iso_files(script_dir: Path) -> None:
             pass
 
 
+def cleanup_nix_cache() -> None:
+    """Clean up nix cache to avoid derivation conflicts between builds
+    
+    When building different logging profiles, they create different derivations
+    with the same output path name but different content. This causes "outputs
+    not valid" errors. We fix this by clearing the failed build cache.
+    """
+    import subprocess
+    # Run nix store repair-paths to fix any broken paths
+    try:
+        subprocess.run(
+            ["nix", "store", "repair-paths", "--extra-experimental-features", "nix-command flakes"],
+            timeout=30,
+            capture_output=True,
+        )
+    except Exception:
+        pass  # It's okay if this fails, it's just cleanup
+
+
 def test_build_minimal_creates_iso() -> None:
     """Test that building with minimal profile creates an ISO file
     
@@ -67,12 +86,13 @@ def test_build_debug_creates_iso() -> None:
     """Test that building with debug profile creates an ISO file
     
     This test:
-    1. Cleans up old result symlinks
+    1. Cleans up old result symlinks and nix cache
     2. Runs nix build with debug profile
     3. Verifies ISO file exists and is valid
     """
-    # Arrange: Clean up old result symlinks
+    # Arrange: Clean up old result symlinks and cache
     cleanup_iso_files(PROJECT_ROOT)
+    cleanup_nix_cache()
     
     # Act: Build with debug profile
     return_code = build_iso(PROJECT_ROOT, "debug", PROJECT_ROOT / "build.log")

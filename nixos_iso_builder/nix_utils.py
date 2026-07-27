@@ -88,6 +88,14 @@ def build_iso(
     """
     flake_output = f".#bootDebugISO-{log_level}"
 
+    # Run garbage collection before build to save disk space
+    log_info("Running garbage collection to free up space...")
+    gc_result = subprocess.run(["nix-store", "--gc"], check=False)
+    if gc_result.returncode == 0:
+        log_info("Garbage collection completed")
+    else:
+        log_warn("Garbage collection failed, continuing anyway")
+
     try:
         with open(logfile_path, "w") as logfile:
             process = subprocess.Popen(
@@ -99,6 +107,7 @@ def build_iso(
                     "--print-out-paths",
                     "--print-build-logs",
                     "--rebuild",
+                    "--repair",
                     flake_output,
                 ],
                 cwd=script_dir,

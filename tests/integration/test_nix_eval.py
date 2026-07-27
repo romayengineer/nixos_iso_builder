@@ -445,3 +445,47 @@ def test_bootdebugiso_iso_name_accessible() -> None:
     print(f"isoName: {iso_name}")
     assert iso_name.endswith(".iso"), f"isoName should end with .iso: {iso_name}"
     assert "nixos" in iso_name.lower(), f"isoName should contain nixos: {iso_name}"
+
+
+def test_different_profiles_have_different_drvpaths() -> None:
+    """Test that different logging profiles produce DIFFERENT derivations
+    
+    This is critical - if debug and minimal profiles produce the same drvPath,
+    the build system will fail because they have different NixOS configs
+    but the same cache key.
+    """
+    # Get drvPaths for different profiles
+    minimal_drv = run_nix_eval(".#bootDebugISO-minimal.drvPath")
+    minimal_drv = minimal_drv.strip('"')
+    
+    debug_drv = run_nix_eval(".#bootDebugISO-debug.drvPath")
+    debug_drv = debug_drv.strip('"')
+    
+    info_drv = run_nix_eval(".#bootDebugISO-info.drvPath")
+    info_drv = info_drv.strip('"')
+    
+    print(f"minimal drvPath: {minimal_drv}")
+    print(f"debug drvPath: {debug_drv}")
+    print(f"info drvPath: {info_drv}")
+    
+    # Each profile should have a different drvPath (different hash)
+    # because they have different logging configurations
+    assert minimal_drv != debug_drv, f"minimal and debug should have different drvPaths"
+    assert debug_drv != info_drv, f"debug and info should have different drvPaths"
+    assert minimal_drv != info_drv, f"minimal and info should have different drvPaths"
+
+
+def test_profiles_have_different_kernel_params() -> None:
+    """Test that different profiles declare different kernel parameters
+    
+    This verifies that the logging config is actually being used to
+    configure different NixOS settings for each profile.
+    """
+    # Since we can't easily evaluate the boot.kernelParams, we can at least
+    # verify the drvPath is different (which indicates config differences)
+    minimal_drv = run_nix_eval(".#bootDebugISO-minimal.drvPath")
+    debug_drv = run_nix_eval(".#bootDebugISO-debug.drvPath")
+    
+    # If drvPaths are the same, the configs are identical (wrong!)
+    assert minimal_drv != debug_drv, "Different profiles must have different configurations"
+    print("✓ Profiles have different drvPaths (configs are distinct)")

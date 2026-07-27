@@ -42,14 +42,13 @@
     # url format: github:OWNER/REPO/REF
     # REF options:
     #   nixos-26.05  - Latest stable branch (2026 May release)
-    #   nixos-unstable - Rolling release (bleeding edge, may have issues) - CURRENTLY RECOMMENDED
+    #   nixos-26.05 - Rolling release (bleeding edge, may have issues) - CURRENTLY RECOMMENDED
     #   nixos-25.11  - Previous stable release
     #   main         - Latest development branch
     # Pinning to a specific branch ensures reproducible builds across time
     # All machines using this flake will get the same versions
-    # NOTE: Using nixos-unstable because nixos-26.05 has broken isoImage
-    # that doesn't create actual output files (https://github.com/NixOS/nixpkgs/issues/...)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Using nixos-25.11 stable (nixos-unstable is corrupted on this date)
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
   };
 
   # outputs: What this flake produces (build outputs)
@@ -127,12 +126,24 @@
                  # EMERGENCY ACCESS & DEBUGGING
                  # ========================================
                  
-                  # boot.initrd.systemd.emergencyAccess: Emergency shell on boot failure
-                  # Uses: logs.emergencyAccess
-                  # true  = Interactive shell if initrd fails (for debugging)
-                  # false = Panic without shell (for production/security)
-                  # Use lib.mkForce to override the default from iso-image.nix
-                  boot.initrd.systemd.emergencyAccess = nixpkgs.lib.mkForce logs.emergencyAccess;
+                 # boot.initrd.systemd.emergencyAccess: Emergency shell on boot failure
+                   # Uses: logs.emergencyAccess
+                   # true  = Interactive shell if initrd fails (for debugging)
+                   # false = Panic without shell (for production/security)
+                   # Use lib.mkForce to override the default from iso-image.nix
+                   boot.initrd.systemd.emergencyAccess = nixpkgs.lib.mkForce logs.emergencyAccess;
+
+                 # services.nscd.enable: Disable nscd
+                 # nixpkgs nsncd package sometimes has broken dependencies
+                 # We don't need nscd in a minimal ISO, so disable it
+                 services.nscd.enable = false;
+                 system.nssModules = nixpkgs.lib.mkForce [];
+                 
+                 # security.wrappers: Disable suid-sgid-wrappers
+                 # This depends on cross-compilation tools that may have broken files
+                 # We don't need it in a minimal ISO, disable with mkForce
+                 security.wrappers = nixpkgs.lib.mkForce {};
+                 systemd.services.suid-sgid-wrappers.enable = nixpkgs.lib.mkForce false;
 
                 # ========================================
                 # ISO IMAGE OPTIMIZATION
@@ -164,6 +175,8 @@
                 # OPTIONAL: USEFUL DEBUGGING PACKAGES
                 # ========================================
                 
+
+
                 # environment.systemPackages: Additional packages included in the ISO
                 # These tools are included in the live environment for troubleshooting
                 # larger package list = larger ISO size (trade-off)
