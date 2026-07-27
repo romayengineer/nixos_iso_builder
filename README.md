@@ -33,6 +33,19 @@ ls -lh result/iso/nixos-*.iso
 
 **Note**: The build script automatically handles the `--extra-experimental-features "nix-command flakes"` flag required for Flakes.
 
+**Git progress during first build**: On first build, Nix clones the nixpkgs repository with submodules (~8M objects). To see git clone/fetch progress, use `GIT_PROGRESS_DELAY=0`:
+
+```bash
+# Via Makefile (env var set automatically):
+make build
+
+# Direct nix usage:
+GIT_PROGRESS_DELAY=0 nix build --extra-experimental-features "nix-command flakes" --verbose .#bootDebugISO
+
+# Pre-fetch inputs to see git progress before building:
+GIT_PROGRESS_DELAY=0 nix flake lock --update-input nixpkgs --extra-experimental-features "nix-command flakes" --verbose
+```
+
 The build output will be a symlink `result/` pointing to the built ISO.
 
 ### Logging Profiles

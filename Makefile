@@ -1,10 +1,11 @@
-.PHONY: help build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all
+.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make help           - Show this help message"
+	@echo "  make fetch          - Pre-fetch nixpkgs inputs (shows git clone progress)"
 	@echo "  make build          - Build ISO with debug logging (default)"
 	@echo "  make build-debug    - Build with debug profile (max verbosity)"
 	@echo "  make build-info     - Build with info profile (balanced logging)"
@@ -36,19 +37,23 @@ help:
 	@echo "  make run            # Boot ISO in QEMU"
 
 build:
-	@python3 build.py build
+	@GIT_PROGRESS_DELAY=0 python3 build.py build
 
 build-debug:
-	@python3 build.py build --log-level debug
+	@GIT_PROGRESS_DELAY=0 python3 build.py build --log-level debug
 
 build-info:
-	@python3 build.py build --log-level info
+	@GIT_PROGRESS_DELAY=0 python3 build.py build --log-level info
 
 build-prod:
-	@python3 build.py build --log-level production
+	@GIT_PROGRESS_DELAY=0 python3 build.py build --log-level production
 
 build-minimal:
-	@python3 build.py build --log-level minimal
+	@GIT_PROGRESS_DELAY=0 python3 build.py build --log-level minimal
+
+fetch:
+	@echo "📦 Pre-fetching nixpkgs source with submodules (shows git progress)..."
+	@GIT_PROGRESS_DELAY=0 nix flake lock --update-input nixpkgs --extra-experimental-features "nix-command flakes" --verbose
 
 clean:
 	@python3 build.py clean

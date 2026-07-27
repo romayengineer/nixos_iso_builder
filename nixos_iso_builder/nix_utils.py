@@ -1,5 +1,6 @@
 """Nix-related utilities"""
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -99,6 +100,7 @@ def build_iso(
 
     try:
         with open(logfile_path, "w") as logfile:
+            env = {**dict(os.environ), "GIT_PROGRESS_DELAY": "0"}
             process = subprocess.Popen(
                 [
                     "nix",
@@ -109,6 +111,7 @@ def build_iso(
                     "--print-build-logs",
                     "--rebuild",
                     "--repair",
+                    "--verbose",
                     flake_output,
                 ],
                 cwd=script_dir,
@@ -116,6 +119,7 @@ def build_iso(
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                env=env,
             )
 
             # Stream output to both console and file
