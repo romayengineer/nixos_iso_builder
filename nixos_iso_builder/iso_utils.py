@@ -10,9 +10,10 @@ def find_iso(script_dir: Path) -> Optional[str]:
     """Find the built ISO file, return path or None
 
     Searches for ISO files in this order:
-    1. result/iso/ (standard output location)
-    2. result symlink directly (if it's a file)
-    3. Any result-* variant symlinks pointing to ISO directories
+    1. output/iso/ (Docker build output)
+    2. result/iso/ (standard nix build output location)
+    3. result symlink directly (if it's a file)
+    4. Any result-* variant symlinks pointing to ISO directories
 
     Does NOT search /nix/store broadly to avoid finding stale ISOs.
     Users can access nix store paths directly if needed.
@@ -23,15 +24,19 @@ def find_iso(script_dir: Path) -> Optional[str]:
     Returns:
         Path to ISO file as string, or None if not found
     """
-    # Try result/iso/ first
-    result_link = script_dir / "result"
-    iso_dir = result_link / "iso"
-    if iso_dir.exists() and iso_dir.is_dir():
-        isos = sorted(iso_dir.glob("nixos-*.iso"))
-        if isos:
-            return str(isos[0])
+    candidates = [
+        script_dir / "result" / "iso",
+        script_dir / "output" / "result" / "iso",  # legacy: old cp -rL result /build/output/
+    ]
+
+    for iso_dir in candidates:
+        if iso_dir.exists() and iso_dir.is_dir():
+            isos = sorted(iso_dir.glob("nixos-*.iso"))
+            if isos:
+                return str(isos[0])
 
     # Check if result itself is a direct ISO file
+    result_link = script_dir / "result"
     if result_link.exists() and result_link.is_file() and result_link.suffix == ".iso":
         return str(result_link)
 

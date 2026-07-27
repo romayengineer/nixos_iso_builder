@@ -84,7 +84,7 @@ docker-build:
 		-v nix-store-cache:/nix \
 		-v "$(PWD):/build" \
 		nixos-iso-builder \
-		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build $(LOG_LEVEL) && cp -rL result /build/output/'
+		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build $(LOG_LEVEL) && cp -rL result/. /build/output/'
 	@echo "✅ ISO files in output/iso/:"
 	@ls -lh "$(PWD)/output/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
 
