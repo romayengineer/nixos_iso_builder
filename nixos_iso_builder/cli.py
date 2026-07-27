@@ -11,7 +11,7 @@ from .commands import (
     cmd_clean,
     cmd_help,
     cmd_inspect,
-    cmd_test,
+    cmd_run,
 )
 
 
@@ -40,8 +40,8 @@ def create_parser() -> argparse.ArgumentParser:
     # Clean command
     subparsers.add_parser("clean", help="Remove build artifacts")
 
-    # Test command
-    subparsers.add_parser("test", help="Test ISO in QEMU")
+    # Run command (boot ISO in QEMU)
+    subparsers.add_parser("run", help="Boot ISO in QEMU")
 
     # Inspect command
     subparsers.add_parser("inspect", help="Mount and inspect ISO contents")
@@ -73,7 +73,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     commands = {
         "build": cmd_build,
         "clean": cmd_clean,
-        "test": cmd_test,
+        "run": cmd_run,
         "inspect": cmd_inspect,
         "burn-help": cmd_burn_help,
         "help": cmd_help,

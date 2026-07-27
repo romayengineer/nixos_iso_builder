@@ -115,7 +115,8 @@ test:
 	@pytest tests -v
 
 run:
-	@python3 build.py test
+	@echo "🖥️  Booting ISO in QEMU..."
+	@python3 build.py run
 
 inspect:
 	@python3 build.py inspect

@@ -86,9 +86,9 @@ def cmd_clean(args: Namespace, script_dir: Path) -> int:
     return 0
 
 
-def cmd_test(args: Namespace, script_dir: Path) -> int:
-    """Test ISO in QEMU"""
-    log_info("Testing ISO in QEMU...")
+def cmd_run(args: Namespace, script_dir: Path) -> int:
+    """Boot ISO in QEMU"""
+    log_info("Booting ISO in QEMU...")
 
     if not command_exists("qemu-system-x86_64"):
         log_error("QEMU not found")
@@ -97,13 +97,8 @@ def cmd_test(args: Namespace, script_dir: Path) -> int:
 
     iso = find_iso(script_dir)
     if not iso:
-        log_info("ISO not found, building first...")
-        if cmd_build(args, script_dir) != 0:
-            return 1
-        iso = find_iso(script_dir)
-        if not iso:
-            log_error("ISO still not found after build")
-            return 1
+        log_error("ISO image not found — build one first with: python3 build.py build")
+        return 1
 
     log_info(f"Using ISO: {iso}")
 
