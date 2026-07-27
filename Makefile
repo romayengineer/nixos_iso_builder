@@ -69,14 +69,15 @@ docker-clean-cache:
 
 docker-build: docker-image
 	@echo "🐳 Building ISO inside Docker (Linux container)..."
-	@mkdir -p "$(PWD)/output"
+	@rm -f "$(PWD)/result"
+	@mkdir -p "$(PWD)/result"
 	@docker run --rm --entrypoint sh \
 		-v nix-store-cache:/nix \
 		-v "$(PWD):/build" \
 		nixos-iso-builder \
-		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build && cp -rL result/iso /build/output/'
-	@echo "✅ ISO files in output/iso/:"
-	@ls -lh "$(PWD)/output/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
+		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build && cp -rL result /build/result/'
+	@echo "✅ ISO files in result/iso/:"
+	@ls -lh "$(PWD)/result/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
 
 docker-shell:
 	@echo "🐳 Starting interactive shell in Docker container..."
