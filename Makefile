@@ -1,4 +1,4 @@
-.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all
+.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all docker-image docker-build docker-shell
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
@@ -22,6 +22,9 @@ help:
 	@echo "  make test-integration - Run integration tests (builds real ISOs)"
 	@echo "  make test-unit      - Run unit tests"
 	@echo "  make test-all       - Run all tests"
+	@echo "  make docker-image   - Build the Docker build image"
+	@echo "  make docker-build   - Build ISO inside Docker container"
+	@echo "  make docker-shell   - Interactive shell in Docker container"
 	@echo ""
 	@echo "Log levels:"
 	@echo "  debug               - Maximum verbosity (troubleshooting)"
@@ -54,6 +57,22 @@ build-minimal:
 fetch:
 	@echo "📦 Pre-fetching nixpkgs source with submodules (shows git progress)..."
 	@GIT_PROGRESS_DELAY=0 nix flake lock --update-input nixpkgs --extra-experimental-features "nix-command flakes" --verbose
+
+docker-image:
+	@echo "🐳 Building Docker image (pre-fetches nixpkgs with submodules)..."
+	@docker build -t nixos-iso-builder .
+
+docker-build: docker-image
+	@echo "🐳 Building ISO inside Docker (Linux container)..."
+	@mkdir -p "$(PWD)/output"
+	@docker run --rm -v "$(PWD):/build" nixos-iso-builder \
+		sh -c 'GIT_PROGRESS_DELAY=0 ./build.py build && cp -rL result/iso /build/output/'
+	@echo "✅ ISO files in output/iso/:"
+	@ls -lh "$(PWD)/output/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
+
+docker-shell:
+	@echo "🐳 Starting interactive shell in Docker container..."
+	@docker run --rm -it -v "$(PWD):/build" nixos-iso-builder sh
 
 clean:
 	@python3 build.py clean

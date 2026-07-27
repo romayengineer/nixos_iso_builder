@@ -134,10 +134,49 @@ To add a new logging profile:
      @python3 build.py build --log-level newprofile
    ```
 
+## Docker Build Support (macOS/Windows)
+
+On macOS (or Windows via WSL), building Linux ISOs natively is not possible. The project supports building inside a Linux Docker container.
+
+### How Docker Build Works
+
+**Architecture**:
+- `Dockerfile`: Based on `nixos/nix:latest` (Alpine + Nix pre-installed, ~90MB)
+- Pre-fetches nixpkgs with submodules during `docker build` so it's cached in the image layer
+- Subsequent builds reuse the cached source instead of cloning from scratch
+- The build runs inside a Linux container, so no platform mismatch issues
+- ISO output is copied from the nix store to `output/iso/` on the host
+
+### Commands
+
+```bash
+# Set up Docker (macOS):
+brew install colima && colima start
+
+# Build the Docker image (pre-fetches nixpkgs, ~2.5 GiB download):
+make docker-image
+
+# Build ISO inside container (uses cached nixpkgs):
+make docker-build
+
+# Interactive shell inside container:
+make docker-shell
+```
+
+### Key Files
+- `Dockerfile` (21 lines): Alpine + Nix + python3 + make + pre-fetched nixpkgs
+
+### Notes
+- First `make docker-image` takes 15-30 minutes (cloning nixpkgs with submodules)
+- Subsequent builds are much faster (nixpkgs cached in Docker layer + Nix store cache)
+- The Docker image has `experimental-features = nix-command flakes` configured
+- `GIT_PROGRESS_DELAY=0` is set in the build command to show git progress
+
 ## Project Layout
 
 ```
 ./
+├── Dockerfile                 # Docker build image (Alpine + Nix + python3 + make)
 ├── flake.nix                  # Flakes configuration for ISO build (222 lines)
 ├── flake.lock                 # Lock file (auto-generated, commit to git)
 ├── logging-config.nix         # Logging profile definitions (195 lines)

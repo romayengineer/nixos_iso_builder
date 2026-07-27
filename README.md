@@ -8,15 +8,24 @@ A reproducible NixOS ISO image configured for maximum boot-time verbosity and de
 
 ### Prerequisites
 
-1. **Nix package manager** installed on your build machine
-   - Install: https://nixos.org/download/
-   - Verify: `nix --version`
+Choose one:
+
+**Option A: Linux (native)** — Nix package manager installed
+  - Install: https://nixos.org/download/
+  - Verify: `nix --version`
+
+**Option B: macOS or Windows (via Docker)** — Docker installed
+  - Install Docker Desktop: https://www.docker.com/products/docker-desktop/
+  - Or use Colima: `brew install colima && colima start`
+  - Verify: `docker --version`
 
 2. **Disk space**: ~15GB working space for first build, ~900MB for final ISO
 3. **Internet**: Required to download dependencies
 4. **USB pendrive**: For burning the final ISO
 
 ### Build the ISO
+
+#### On Linux (native):
 
 ```bash
 # Navigate to project directory
@@ -32,6 +41,18 @@ ls -lh result/iso/nixos-*.iso
 ```
 
 **Note**: The build script automatically handles the `--extra-experimental-features "nix-command flakes"` flag required for Flakes.
+
+#### On macOS or Windows (via Docker):
+
+```bash
+# Build the ISO inside a Linux container
+make docker-build
+
+# ISO will be in output/iso/
+ls -lh output/iso/nixos-*.iso
+```
+
+This runs the build in a Linux (Alpine-based) container with Nix pre-installed and nixpkgs pre-fetched (cached in the Docker image layer).
 
 **Git progress during first build**: On first build, Nix clones the nixpkgs repository with submodules (~8M objects). To see git clone/fetch progress, use `GIT_PROGRESS_DELAY=0`:
 

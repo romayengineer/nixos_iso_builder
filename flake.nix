@@ -66,10 +66,22 @@
   # Takes inputs as arguments and produces derivations (build recipes)
   outputs = { self, nixpkgs }:
     let
-      # system: Target architecture for the build
+      # supportedSystems: List of systems this flake can evaluate on
+      # Includes both Linux and macOS so 'nix build' works from any platform
       # Range: "x86_64-linux", "aarch64-linux", "x86_64-darwin", "aarch64-darwin"
-      # "x86_64-linux" = 64-bit Intel/AMD Linux (most common for server/desktop)
-      # "aarch64-linux" = ARM 64-bit Linux (Raspberry Pi, embedded systems)
+      # "x86_64-linux"  = 64-bit Intel/AMD Linux
+      # "aarch64-linux" = ARM 64-bit Linux (Raspberry Pi, etc.)
+      # "x86_64-darwin" = macOS on Intel
+      # "aarch64-darwin" = macOS on Apple Silicon
+      # The ISO always targets x86_64-linux regardless of build platform
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      
+      # forAllSystems: Helper to define outputs for every supported system
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+
+      # system: Target architecture for the ISO build
+      # Always "x86_64-linux" — the ISO targets 64-bit x86 Linux hardware
+      # This is independent of the host system (macOS builds cross-compile)
       system = "x86_64-linux";
       
       # pkgs: Pre-packaged software available for this system
@@ -261,22 +273,22 @@
     in
     {
       # packages: Derivations (buildable things) this flake provides
-      # Create separate package outputs for each logging profile
+      # Exposed for all supported systems (Linux + macOS) so 'nix build' works
+      # from any platform. The actual build always targets x86_64-linux.
       # Usage: nix build .#bootDebugISO-debug     (max verbosity)
       #        nix build .#bootDebugISO-info      (balanced)
       #        nix build .#bootDebugISO-production (minimal)
       #        nix build .#bootDebugISO-minimal    (quiet)
-      packages.${system} = {
+      packages = forAllSystems (_: {
         bootDebugISO-debug = mkBootISO "debug";
         bootDebugISO-info = mkBootISO "info";
         bootDebugISO-production = mkBootISO "production";
         bootDebugISO-minimal = mkBootISO "minimal";
         bootDebugISO = mkBootISO "debug";  # Default: debug profile
-      };
+      });
 
       # defaultPackage: Package used when user runs 'nix build' without #attribute
-      # Range: Any package in packages.${system}
-      # Defaults to debug profile (maximum verbosity for troubleshooting)
-      defaultPackage.${system} = self.packages.${system}.bootDebugISO;
+      # Exposed for all supported systems. Always defaults to debug profile.
+      defaultPackage = forAllSystems (_: self.packages.${system}.bootDebugISO);
     };
   }
