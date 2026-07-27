@@ -1,4 +1,4 @@
-.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all docker-image docker-build docker-shell docker-clean-cache
+.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all docker-image docker-build docker-build-debug docker-build-info docker-build-prod docker-build-minimal docker-shell docker-clean-cache
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
@@ -23,9 +23,16 @@ help:
 	@echo "  make test-unit      - Run unit tests"
 	@echo "  make test-all       - Run all tests"
 	@echo "  make docker-image   - Build the Docker build image"
-	@echo "  make docker-build   - Build ISO inside Docker container"
+	@echo "  make docker-build   - Build ISO inside Docker (default profile)"
+	@echo "  make docker-build-debug - Build inside Docker with debug profile"
+	@echo "  make docker-build-info  - Build inside Docker with info profile"
+	@echo "  make docker-build-prod  - Build inside Docker with production profile"
+	@echo "  make docker-build-minimal - Build inside Docker with minimal profile"
 	@echo "  make docker-shell   - Interactive shell in Docker container"
 	@echo "  make docker-clean-cache - Remove Nix store cache volume"
+	@echo ""
+	@echo "  # Build with custom profile:"
+	@echo "  make docker-build LOG_LEVEL='--log-level info'"
 	@echo ""
 	@echo "Log levels:"
 	@echo "  debug               - Maximum verbosity (troubleshooting)"
@@ -67,7 +74,7 @@ docker-clean-cache:
 	@echo "🗑️  Removing Nix store cache volume..."
 	@docker volume rm nix-store-cache 2>/dev/null && echo "✅ Cache volume removed" || echo "  (no cache volume found)"
 
-docker-build: docker-image
+docker-build:
 	@echo "🐳 Building ISO inside Docker (Linux container)..."
 	@rm -f "$(PWD)/result"
 	@mkdir -p "$(PWD)/result"
@@ -75,9 +82,21 @@ docker-build: docker-image
 		-v nix-store-cache:/nix \
 		-v "$(PWD):/build" \
 		nixos-iso-builder \
-		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build && cp -rL result /build/result/'
+		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build $(LOG_LEVEL) && cp -rL result /build/result/'
 	@echo "✅ ISO files in result/iso/:"
 	@ls -lh "$(PWD)/result/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
+
+docker-build-debug: LOG_LEVEL = --log-level debug
+docker-build-debug: docker-build
+
+docker-build-info: LOG_LEVEL = --log-level info
+docker-build-info: docker-build
+
+docker-build-prod: LOG_LEVEL = --log-level production
+docker-build-prod: docker-build
+
+docker-build-minimal: LOG_LEVEL = --log-level minimal
+docker-build-minimal: docker-build
 
 docker-shell:
 	@echo "🐳 Starting interactive shell in Docker container..."
