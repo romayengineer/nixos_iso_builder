@@ -76,15 +76,17 @@ docker-clean-cache:
 
 docker-build:
 	@echo "🐳 Building ISO inside Docker (Linux container)..."
-	@rm -f "$(PWD)/result"
-	@mkdir -p "$(PWD)/result"
+	# Use 'output' not 'result' because nix build inside the container creates a
+	# symlink named 'result' that would collide with a host directory named 'result'
+	@rm -rf "$(PWD)/output"
+	@mkdir -p "$(PWD)/output"
 	@docker run --rm --entrypoint sh \
 		-v nix-store-cache:/nix \
 		-v "$(PWD):/build" \
 		nixos-iso-builder \
-		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build $(LOG_LEVEL) && cp -rL result /build/result/'
-	@echo "✅ ISO files in result/iso/:"
-	@ls -lh "$(PWD)/result/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
+		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build $(LOG_LEVEL) && cp -rL result /build/output/'
+	@echo "✅ ISO files in output/iso/:"
+	@ls -lh "$(PWD)/output/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
 
 docker-build-debug: LOG_LEVEL = --log-level debug
 docker-build-debug: docker-build
