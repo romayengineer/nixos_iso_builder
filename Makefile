@@ -1,4 +1,4 @@
-.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all docker-image docker-build docker-shell
+.PHONY: help fetch build build-debug build-info build-prod build-minimal clean test run inspect burn-help check lint install-dev test-integration test-unit test-all docker-image docker-build docker-shell docker-clean-cache
 
 help:
 	@echo "NixOS Debug ISO Build System - Makefile"
@@ -25,6 +25,7 @@ help:
 	@echo "  make docker-image   - Build the Docker build image"
 	@echo "  make docker-build   - Build ISO inside Docker container"
 	@echo "  make docker-shell   - Interactive shell in Docker container"
+	@echo "  make docker-clean-cache - Remove Nix store cache volume"
 	@echo ""
 	@echo "Log levels:"
 	@echo "  debug               - Maximum verbosity (troubleshooting)"
@@ -62,17 +63,27 @@ docker-image:
 	@echo "🐳 Building Docker image (pre-fetches nixpkgs with submodules)..."
 	@docker build -t nixos-iso-builder .
 
+docker-clean-cache:
+	@echo "🗑️  Removing Nix store cache volume..."
+	@docker volume rm nix-store-cache 2>/dev/null && echo "✅ Cache volume removed" || echo "  (no cache volume found)"
+
 docker-build: docker-image
 	@echo "🐳 Building ISO inside Docker (Linux container)..."
 	@mkdir -p "$(PWD)/output"
-	@docker run --rm -v "$(PWD):/build" nixos-iso-builder \
-		sh -c 'GIT_PROGRESS_DELAY=0 ./build.py build && cp -rL result/iso /build/output/'
+	@docker run --rm --entrypoint sh \
+		-v nix-store-cache:/nix \
+		-v "$(PWD):/build" \
+		nixos-iso-builder \
+		-c 'git config --global safe.directory /build && GIT_PROGRESS_DELAY=0 python3 ./build.py build && cp -rL result/iso /build/output/'
 	@echo "✅ ISO files in output/iso/:"
 	@ls -lh "$(PWD)/output/iso/" 2>/dev/null || echo "  (no ISO found - check build output above)"
 
 docker-shell:
 	@echo "🐳 Starting interactive shell in Docker container..."
-	@docker run --rm -it -v "$(PWD):/build" nixos-iso-builder sh
+	@docker run --rm -it --entrypoint sh \
+		-v nix-store-cache:/nix \
+		-v "$(PWD):/build" \
+		nixos-iso-builder
 
 clean:
 	@python3 build.py clean

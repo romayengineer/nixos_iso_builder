@@ -16,9 +16,11 @@ COPY flake.nix flake.lock logging-config.nix ./
 # Subsequent builds reuse this cached source instead of cloning from scratch
 RUN nix flake lock --update-input nixpkgs --extra-experimental-features "nix-command flakes"
 
+# git safe directory for mounted volumes
+RUN git config --global safe.directory '*'
+
 # Copy the rest of the project files
 COPY . .
 
 # Default command: build with debug logging
-ENTRYPOINT ["./build.py"]
-CMD ["build"]
+CMD ["python3", "./build.py", "build"]
