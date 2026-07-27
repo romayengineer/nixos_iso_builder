@@ -48,11 +48,16 @@ ls -lh result/iso/nixos-*.iso
 # Build the ISO inside a Linux container
 make docker-build
 
+# Build with a specific logging profile
+make docker-build-info    # Info profile
+make docker-build-prod    # Production profile
+make docker-build-minimal # Minimal profile
+
 # ISO will be in output/iso/
 ls -lh output/iso/nixos-*.iso
 ```
 
-This runs the build in a Linux (Alpine-based) container with Nix pre-installed and nixpkgs pre-fetched (cached in the Docker image layer).
+This runs the build in a Linux (Alpine-based) container with Nix pre-installed and nixpkgs pre-fetched (cached in the Docker image layer). The Nix store is persisted across builds via a Docker volume (`nix-store-cache`) for faster rebuilds. To clear the cache: `make docker-clean-cache`.
 
 **Git progress during first build**: On first build, Nix clones the nixpkgs repository with submodules (~8M objects). To see git clone/fetch progress, use `GIT_PROGRESS_DELAY=0`:
 
@@ -67,7 +72,7 @@ GIT_PROGRESS_DELAY=0 nix build --extra-experimental-features "nix-command flakes
 GIT_PROGRESS_DELAY=0 nix flake lock --update-input nixpkgs --extra-experimental-features "nix-command flakes" --verbose
 ```
 
-The build output will be a symlink `result/` pointing to the built ISO.
+The build output will be a symlink `result/` pointing to the built ISO (local builds), or an `output/` directory containing the ISO (Docker builds).
 
 ### Logging Profiles
 
@@ -75,12 +80,12 @@ The ISO can be built with different logging verbosity levels. Choose the profile
 
 #### Available Profiles
 
-| Profile | Verbosity | Use Case | Command |
-|---------|-----------|----------|---------|
-| **debug** | Maximum | Troubleshooting boot failures | `./build.py build --log-level debug` |
-| **info** | Balanced | General testing/understanding boot | `./build.py build --log-level info` |
-| **production** | Minimal | Deployment (errors only) | `./build.py build --log-level production` |
-| **minimal** | Quiet | CI/CD pipelines (critical only) | `./build.py build --log-level minimal` |
+| Profile | Verbosity | Use Case | Native Command | Docker Command |
+|---------|-----------|----------|----------------|----------------|
+| **debug** | Maximum | Troubleshooting boot failures | `./build.py build --log-level debug` | `make docker-build-debug` |
+| **info** | Balanced | General testing/understanding boot | `./build.py build --log-level info` | `make docker-build-info` |
+| **production** | Minimal | Deployment (errors only) | `./build.py build --log-level production` | `make docker-build-prod` |
+| **minimal** | Quiet | CI/CD pipelines (critical only) | `./build.py build --log-level minimal` | `make docker-build-minimal` |
 
 #### Examples
 
@@ -148,6 +153,7 @@ sudo umount /dev/sdX*
 
 # 3. Burn ISO to USB (method 1: dd)
 sudo dd if=result/iso/nixos-*.iso of=/dev/sdX bs=4M status=progress conv=fsync
+# For Docker builds: use output/iso/nixos-*.iso instead
 sudo sync
 
 # 3. Burn ISO to USB (method 2: GNOME Disks, Etcher, or similar GUI)
@@ -215,10 +221,11 @@ If you modify `flake.nix`:
 
 ```bash
 # Clean previous build (optional but recommended)
-rm -rf result/
+rm -rf result/ output/
 
 # Rebuild (subsequent builds are much faster due to caching)
-nix build .#bootDebugISO
+# Local: nix build .#bootDebugISO
+# Docker: make docker-build
 ```
 
 ## Testing Without Burning to USB
@@ -228,9 +235,10 @@ nix build .#bootDebugISO
 ```bash
 # Install QEMU if needed
 # On Ubuntu: sudo apt install qemu-system-x86
+# On macOS: brew install qemu
 
-# Boot ISO in QEMU (verify boot behavior)
-qemu-system-x86_64 -enable-kvm -m 512 -cdrom result/iso/nixos-*.iso
+# Boot ISO in QEMU (full screen with zoom-to-fit)
+qemu-system-x86_64 -m 512 -display cocoa,full-screen=on,zoom-to-fit=on -cdrom result/iso/nixos-*.iso
 
 # Watch for kernel output and systemd messages
 ```
@@ -242,6 +250,9 @@ qemu-system-x86_64 -enable-kvm -m 512 -cdrom result/iso/nixos-*.iso
 mkdir -p mnt
 sudo mount -o loop result/iso/nixos-*.iso mnt
 ls -la mnt/
+
+# For Docker builds, use output/iso/ instead:
+# sudo mount -o loop output/iso/nixos-*.iso mnt
 
 # Expected: boot/ EFI/ isolinux/ nix-store.squashfs version.txt
 sudo umount mnt

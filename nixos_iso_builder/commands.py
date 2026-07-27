@@ -120,7 +120,7 @@ def cmd_run(args: Namespace, script_dir: Path) -> int:
     # Try to run QEMU without KVM
     try:
         subprocess.run(
-            ["qemu-system-x86_64", "-m", "512", "-display", "cocoa,full-screen=on", "-cdrom", iso],
+            ["qemu-system-x86_64", "-m", "512", "-display", "cocoa,full-screen=on,zoom-to-fit=on", "-cdrom", iso],
             check=False,
             stderr=subprocess.DEVNULL,
         )

@@ -7,8 +7,8 @@ Build a custom NixOS minimal ISO image with debug/verbose logging enabled by def
 
 ### Build Method: Flakes (Modern NixOS)
 - **Build command**: `nix build --extra-experimental-features "nix-command flakes" .#bootDebugISO`
-- **Output path**: `result/iso/nixos-*.iso`
-- **Prerequisites**: Nix package manager must be installed on the build machine
+- **Output path**: `result/iso/nixos-*.iso` (local build) or `output/iso/nixos-*.iso` (Docker build)
+- **Prerequisites**: Nix package manager must be installed on the build machine (local), or Docker (macOS/Windows)
 - **Note**: The `--extra-experimental-features "nix-command flakes"` flag is required for flakes to work
 
 ### Flake Configuration (`flake.nix`)
@@ -88,7 +88,7 @@ The project supports multiple logging profiles that can be selected at build tim
 - `logging-config.nix` (195 lines): Profile definitions with full documentation
 - `flake.nix` (222 lines): Uses `mkBootISO` helper function to generate ISO for each profile
 - `build.py`: Maps `--log-level` to flake package names (`.#bootDebugISO-{profile}`)
-- `Makefile`: Convenient shortcuts (`make build-debug`, `make build-prod`, etc.)
+- `Makefile`: Convenient shortcuts (`make build-debug`, `make build-prod`, etc.) and Docker profile targets (`make docker-build-debug`, `make docker-build-info`, etc.)
 
 ### Profile Selection (No File Modifications)
 
@@ -128,11 +128,14 @@ To add a new logging profile:
    valid_levels = {"debug", "production", "info", "minimal", "newprofile"}
    ```
 
-4. Update Makefile with new target (optional):
-   ```makefile
-   build-newprofile:
-     @python3 build.py build --log-level newprofile
-   ```
+4. Update Makefile with new targets (optional):
+    ```makefile
+    build-newprofile:
+      @python3 build.py build --log-level newprofile
+
+    docker-build-newprofile: LOG_LEVEL = --log-level newprofile
+    docker-build-newprofile: docker-build
+    ```
 
 ## Docker Build Support (macOS/Windows)
 
@@ -156,11 +159,17 @@ brew install colima && colima start
 # Build the Docker image (pre-fetches nixpkgs, ~2.5 GiB download):
 make docker-image
 
-# Build ISO inside container (uses cached nixpkgs):
+# Build ISO inside container (uses cached nixpkgs + persisted Nix store volume):
 make docker-build
+
+# Build ISO with a specific profile:
+make docker-build-info
 
 # Interactive shell inside container:
 make docker-shell
+
+# Clear persisted Nix store cache volume:
+make docker-clean-cache
 ```
 
 ### Key Files
@@ -344,7 +353,7 @@ When a test fails:
 
 ```bash
 # Boot in QEMU for quick iteration
-qemu-system-x86_64 -enable-kvm -m 512 -cdrom result/iso/nixos-*.iso
+qemu-system-x86_64 -m 512 -display cocoa,full-screen=on,zoom-to-fit=on -cdrom result/iso/nixos-*.iso
 
 # Mount ISO to inspect contents (verify nix-store.squashfs exists)
 mkdir -p mnt
@@ -461,7 +470,7 @@ Added 3 new tests to verify installPhase was properly applied:
 ## Success Criteria
 
 ✅ ISO builds without errors (`nix build` exits 0)
-✅ ISO file exists at `result/iso/nixos-*.iso` (~900MB)
+✅ ISO file exists at `result/iso/nixos-*.iso` (local) or `output/iso/nixos-*.iso` (Docker) (~900MB)
 ✅ ISO boots to NixOS live environment
 ✅ `journalctl --boot --all` shows debug-level kernel/systemd messages
 ✅ Boot log captures all failed initialization steps for debugging
