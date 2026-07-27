@@ -47,8 +47,8 @@
     #   main         - Latest development branch
     # Pinning to a specific branch ensures reproducible builds across time
     # All machines using this flake will get the same versions
-    # Using nixos-25.11 stable (nixos-unstable is corrupted on this date)
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    # Using github:master/main which is typically more stable than release branches
+    nixpkgs.url = "github:NixOS/nixpkgs/master";
   };
 
   # outputs: What this flake produces (build outputs)
@@ -139,15 +139,20 @@
                  services.nscd.enable = false;
                  system.nssModules = nixpkgs.lib.mkForce [];
                  
-                 # security.wrappers: Disable suid-sgid-wrappers
-                 # This depends on cross-compilation tools that may have broken files
-                 # We don't need it in a minimal ISO, disable with mkForce
-                 security.wrappers = nixpkgs.lib.mkForce {};
-                 systemd.services.suid-sgid-wrappers.enable = nixpkgs.lib.mkForce false;
+                  # security.wrappers: Disable suid-sgid-wrappers
+                  # This depends on cross-compilation tools that may have broken files
+                  # We don't need it in a minimal ISO, disable with mkForce
+                  security.wrappers = nixpkgs.lib.mkForce {};
+                  systemd.services.suid-sgid-wrappers.enable = nixpkgs.lib.mkForce false;
+                  
+                  # security.pam.services.su.rules.session.xauth: Disable xauth in PAM
+                  # xauth/package.nix doesn't exist in some nixpkgs commits
+                  # We don't need X11 authentication in a minimal ISO
+                  security.pam.services.su.rules.session.xauth.enable = nixpkgs.lib.mkForce false;
 
-                # ========================================
-                # ISO IMAGE OPTIMIZATION
-                # ========================================
+                 # ========================================
+                 # ISO IMAGE OPTIMIZATION
+                 # ========================================
                 
                 # isoImage.squashfsCompression: Compression algorithm for SquashFS ISO
                 # SquashFS is the read-only filesystem used in NixOS ISOs to pack

@@ -12,8 +12,10 @@ def find_iso(script_dir: Path) -> Optional[str]:
     Searches for ISO files in this order:
     1. result/iso/ (standard output location)
     2. result symlink directly (if it's a file)
-    3. ANY ISO in /nix/store under result links or recent paths
-    4. Latest ISO anywhere in /nix/store (fallback)
+    3. Any result-* variant symlinks pointing to ISO directories
+
+    Does NOT search /nix/store broadly to avoid finding stale ISOs.
+    Users can access nix store paths directly if needed.
 
     Args:
         script_dir: Directory to search from (usually where build.py is located)
@@ -34,7 +36,6 @@ def find_iso(script_dir: Path) -> Optional[str]:
         return str(result_link)
 
     # Fallback: Check all result-* symlinks
-    nix_store = Path("/nix/store")
     for result_variant in script_dir.glob("result*"):
         if result_variant.is_symlink():
             target_iso_dir = result_variant / "iso"
@@ -42,20 +43,6 @@ def find_iso(script_dir: Path) -> Optional[str]:
                 isos = sorted(target_iso_dir.glob("nixos-*.iso"))
                 if isos:
                     return str(isos[0])
-
-    # Ultimate fallback: Find any ISO anywhere in /nix/store (newest first)
-    if nix_store.exists():
-        iso_files: List[Path] = []
-        # Search for any nixos ISO file
-        for iso_path in nix_store.glob("**/*.iso"):
-            if iso_path.is_file() and "nixos" in str(iso_path):
-                iso_files.append(iso_path)
-
-        if iso_files:
-            # Sort by modification time, newest first
-            iso_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-            log_warn(f"Using fallback ISO from nix store: {iso_files[0]}")
-            return str(iso_files[0])
 
     return None
 

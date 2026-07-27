@@ -88,13 +88,14 @@ def build_iso(
     """
     flake_output = f".#bootDebugISO-{log_level}"
 
-    # Run garbage collection before build to save disk space
-    log_info("Running garbage collection to free up space...")
-    gc_result = subprocess.run(["nix-store", "--gc"], check=False)
-    if gc_result.returncode == 0:
-        log_info("Garbage collection completed")
-    else:
-        log_warn("Garbage collection failed, continuing anyway")
+    # NOTE: Do NOT add nix-store --gc here. Garbage collection removes cached
+    # derivations from previous builds. When running integration tests that build
+    # multiple profiles (debug, info, production, minimal), --gc would delete
+    # packages shared across profiles, forcing a full rebuild for each test.
+    # This makes tests ~5x slower. Nix's own GC runs automatically when needed;
+    # manual GC is never required in CI/test flows.
+    # Only run nix-store --gc manually from a terminal if you encounter disk
+    # space issues or corrupted cache entries — never in build scripts or tests.
 
     try:
         with open(logfile_path, "w") as logfile:

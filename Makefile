@@ -55,7 +55,7 @@ clean:
 
 test:
 	@echo "🧪 Running pytest tests..."
-	@pytest tests/integration/test_build.py -v
+	@pytest tests -v
 
 run:
 	@python3 build.py test
